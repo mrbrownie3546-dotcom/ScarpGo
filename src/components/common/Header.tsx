@@ -84,7 +84,15 @@ export const Header: React.FC = () => {
               </button>
 
               <button
-                onClick={() => setActivePortal('staff')}
+                onClick={() => {
+                  if (currentUser?.role === 'staff' || currentUser?.role === 'admin') {
+                    setActivePortal('staff');
+                  } else {
+                    setAuthAllowedRoles(['staff']);
+                    setAuthInitialRole('staff');
+                    setShowAuthModal(true);
+                  }
+                }}
                 className={`flex items-center gap-1.5 px-3 py-1 rounded-md font-semibold transition-all ${
                   activePortal === 'staff'
                     ? 'bg-emerald-600 text-white shadow-sm'
@@ -97,7 +105,15 @@ export const Header: React.FC = () => {
               </button>
 
               <button
-                onClick={() => setActivePortal('admin')}
+                onClick={() => {
+                  if (currentUser?.role === 'admin') {
+                    setActivePortal('admin');
+                  } else {
+                    setAuthAllowedRoles(['admin']);
+                    setAuthInitialRole('admin');
+                    setShowAuthModal(true);
+                  }
+                }}
                 className={`flex items-center gap-1.5 px-3 py-1 rounded-md font-semibold transition-all ${
                   activePortal === 'admin'
                     ? 'bg-emerald-600 text-white shadow-sm'

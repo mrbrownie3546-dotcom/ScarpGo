@@ -3,12 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode, useState } from 'react';
 import { ScrapProvider, useScrap } from './context/ScrapContext';
 import { Header } from './components/common/Header';
 import { CustomerHome } from './components/customer/CustomerHome';
 import { StaffDashboard } from './components/staff/StaffDashboard';
 import { AdminDashboard } from './components/admin/AdminDashboard';
+import { AuthModal } from './components/common/AuthModal';
+import { ShieldAlert, Truck, Lock, ArrowLeft, LogIn } from 'lucide-react';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -61,16 +63,109 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 }
 
 const MainPortalView: React.FC = () => {
-  const { activePortal } = useScrap();
+  const { activePortal, setActivePortal, currentUser } = useScrap();
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authRole, setAuthRole] = useState<'staff' | 'admin'>('staff');
+
+  const isStaffAuthenticated = currentUser.role === 'staff' || currentUser.role === 'admin';
+  const isAdminAuthenticated = currentUser.role === 'admin';
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-100 dark:bg-slate-950 overflow-x-hidden">
       <Header />
       <main className="flex-1">
         {activePortal === 'customer' && <CustomerHome />}
-        {activePortal === 'staff' && <StaffDashboard />}
-        {activePortal === 'admin' && <AdminDashboard />}
+
+        {activePortal === 'staff' && (
+          isStaffAuthenticated ? (
+            <StaffDashboard />
+          ) : (
+            <div className="min-h-[75vh] flex items-center justify-center p-6">
+              <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 shadow-2xl text-center space-y-5 animate-in fade-in zoom-in-95">
+                <div className="w-16 h-16 rounded-3xl bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto border border-amber-500/20 shadow-inner">
+                  <Truck className="w-8 h-8" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-slate-900 dark:text-white">
+                    Staff Portal Access Restricted
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
+                    Access to staff.scrapgo.in (Driver Pickup Console) requires authenticated Staff credentials. Please log in as a Staff Driver to continue.
+                  </p>
+                </div>
+                <div className="pt-2 space-y-2">
+                  <button
+                    onClick={() => {
+                      setAuthRole('staff');
+                      setShowAuthModal(true);
+                    }}
+                    className="w-full py-3 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
+                  >
+                    <LogIn className="w-4 h-4" />
+                    <span>Login as Staff Driver</span>
+                  </button>
+                  <button
+                    onClick={() => setActivePortal('customer')}
+                    className="w-full py-2.5 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>Back to Customer Portal</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )
+        )}
+
+        {activePortal === 'admin' && (
+          isAdminAuthenticated ? (
+            <AdminDashboard />
+          ) : (
+            <div className="min-h-[75vh] flex items-center justify-center p-6">
+              <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 shadow-2xl text-center space-y-5 animate-in fade-in zoom-in-95">
+                <div className="w-16 h-16 rounded-3xl bg-blue-500/10 text-blue-500 flex items-center justify-center mx-auto border border-blue-500/20 shadow-inner">
+                  <ShieldAlert className="w-8 h-8" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-slate-900 dark:text-white">
+                    Admin Portal Access Restricted
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
+                    Access to admin.scrapgo.in (Super Admin Dashboard) requires Administrator credentials. Please log in with Super Admin privileges.
+                  </p>
+                </div>
+                <div className="pt-2 space-y-2">
+                  <button
+                    onClick={() => {
+                      setAuthRole('admin');
+                      setShowAuthModal(true);
+                    }}
+                    className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
+                  >
+                    <Lock className="w-4 h-4" />
+                    <span>Login as Super Admin</span>
+                  </button>
+                  <button
+                    onClick={() => setActivePortal('customer')}
+                    className="w-full py-2.5 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span>Back to Customer Portal</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )
+        )}
       </main>
+
+      {showAuthModal && (
+        <AuthModal
+          initialRole={authRole}
+          allowedRoles={[authRole]}
+          onClose={() => setShowAuthModal(false)}
+        />
+      )}
     </div>
   );
 };
