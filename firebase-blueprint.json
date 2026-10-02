@@ -1,67 +1,82 @@
 {
   "entities": {
     "User": {
-      "title": "User Profile",
-      "description": "User account details including role and contact information",
+      "title": "User",
+      "description": "User profile representation for customers, staff, and admins",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
-        "email": { "type": "string" },
-        "full_name": { "type": "string" },
-        "phone": { "type": "string" },
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "full_name": { "type": "string", "maxLength": 128 },
         "role": { "type": "string", "enum": ["customer", "staff", "admin"] },
-        "address": { "type": "string" },
-        "avatar_url": { "type": "string" },
-        "created_at": { "type": "string" }
+        "phone": { "type": "string", "maxLength": 32 },
+        "address": { "type": "string", "maxLength": 512 },
+        "createdAt": { "type": "string", "maxLength": 64 }
       },
-      "required": ["id", "email", "full_name", "role"]
+      "required": ["uid", "email", "role"]
     },
-    "Booking": {
-      "title": "Scrap Booking",
-      "description": "Doorstep scrap pickup booking request",
+    "PickupRequest": {
+      "title": "PickupRequest",
+      "description": "Scrap pickup request created by customer and assigned to staff driver",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
-        "booking_number": { "type": "string" },
-        "customer_id": { "type": "string" },
-        "customer_name": { "type": "string" },
-        "customer_phone": { "type": "string" },
-        "pickup_address": { "type": "string" },
-        "scheduled_date": { "type": "string" },
-        "scheduled_time_slot": { "type": "string" },
-        "status": { "type": "string" },
-        "pickup_otp": { "type": "string" },
-        "created_at": { "type": "string" }
+        "id": { "type": "string", "maxLength": 128 },
+        "customerId": { "type": "string", "maxLength": 128 },
+        "customerName": { "type": "string", "maxLength": 128 },
+        "customerPhone": { "type": "string", "maxLength": 32 },
+        "address": { "type": "string", "maxLength": 512 },
+        "status": { "type": "string", "enum": ["pending", "assigned", "in_progress", "completed", "cancelled"] },
+        "totalEstimatedValue": { "type": "number" },
+        "scheduledDate": { "type": "string", "maxLength": 64 },
+        "assignedStaffId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "maxLength": 64 },
+        "updatedAt": { "type": "string", "maxLength": 64 }
       },
-      "required": ["id", "booking_number", "customer_name", "pickup_address", "status"]
+      "required": ["id", "customerId", "address", "status"]
     },
-    "Category": {
-      "title": "Scrap Category",
-      "description": "Scrap buying category and live rate",
+    "ScrapCategory": {
+      "title": "ScrapCategory",
+      "description": "Categories and rates for scrap items",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
-        "icon": { "type": "string" },
-        "rate_per_kg": { "type": "number" },
-        "unit": { "type": "string" },
-        "active": { "type": "boolean" }
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "ratePerKg": { "type": "number" },
+        "unit": { "type": "string", "maxLength": 32 },
+        "category": { "type": "string", "maxLength": 64 }
       },
-      "required": ["id", "name", "rate_per_kg"]
+      "required": ["id", "name", "ratePerKg"]
+    },
+    "OtpVerification": {
+      "title": "OtpVerification",
+      "description": "Verification OTP for email registration / password reset",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "maxLength": 256 },
+        "code": { "type": "string", "maxLength": 16 },
+        "expiresAt": { "type": "number" },
+        "verified": { "type": "boolean" },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["email", "code", "expiresAt"]
     }
   },
   "firestore": {
     "/users/{userId}": {
-      "schema": "User",
-      "description": "User profiles collection"
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profile collection indexed by Firebase Auth UID"
     },
-    "/bookings/{bookingId}": {
-      "schema": "Booking",
-      "description": "Doorstep pickup bookings"
+    "/pickup_requests/{requestId}": {
+      "schema": { "$ref": "#/entities/PickupRequest" },
+      "description": "Pickup requests created by users and processed by staff drivers"
     },
-    "/categories/{categoryId}": {
-      "schema": "Category",
-      "description": "Scrap categories and buying rates"
+    "/scrap_categories/{categoryId}": {
+      "schema": { "$ref": "#/entities/ScrapCategory" },
+      "description": "Scrap categories and current per kg rates"
+    },
+    "/otp_verifications/{docId}": {
+      "schema": { "$ref": "#/entities/OtpVerification" },
+      "description": "OTP verification codes for account setup and password resets"
     }
   }
 }

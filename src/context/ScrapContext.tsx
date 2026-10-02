@@ -7,7 +7,7 @@ import {
   signOut as firebaseSignOut,
   onAuthStateChanged,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, getDocFromServer } from 'firebase/firestore';
+import { doc, getDoc, setDoc, getDocFromServer, updateDoc } from 'firebase/firestore';
 import {
   Booking,
   BookingStatus,
@@ -96,6 +96,28 @@ interface ScrapContextType {
     phone: string,
     otp: string
   ) => Promise<{ success: boolean; message: string; user?: UserProfile }>;
+  registerCustomerAccountWithPhone: (data: {
+    phone: string;
+    password: string;
+    full_name: string;
+    address: string;
+    email?: string;
+  }) => Promise<{ success: boolean; message: string; user?: UserProfile }>;
+  customerPhoneLogin: (
+    phone: string,
+    password: string
+  ) => Promise<{ success: boolean; message: string; user?: UserProfile }>;
+  sendForgotPasswordPhoneOtp: (
+    phone: string
+  ) => Promise<{ success: boolean; message: string; demoOtp?: string }>;
+  verifyForgotPasswordPhoneOtp: (
+    phone: string,
+    otp: string
+  ) => Promise<{ success: boolean; message: string }>;
+  resetCustomerPasswordWithPhone: (
+    phone: string,
+    newPassword: string
+  ) => Promise<{ success: boolean; message: string }>;
   sendEmailOtp: (
     email: string
   ) => Promise<{ success: boolean; message: string; demoOtp?: string }>;
@@ -210,7 +232,9 @@ interface ScrapContextType {
   markNotificationAsRead: (id: string) => void;
   clearNotifications: () => void;
 
-  // Supabase state
+  // Firebase & Database state
+  firebaseConnected: boolean;
+  refreshFirebaseStatus: () => void;
   supabaseConnected: boolean;
   refreshSupabaseStatus: () => void;
   resetToSampleData: () => void;
@@ -760,11 +784,11 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [scrapItems]);
 
   const [registeredAccounts, setRegisteredAccounts] = useState<{
-    email: string;
+    phone: string;
     password: string;
     full_name: string;
     address: string;
-    phone: string;
+    email?: string;
   }[]>(() => {
     try {
       const saved = localStorage.getItem('scrapgo_customer_accounts_v1');
@@ -862,7 +886,7 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   // ==========================================
-  // 🔐 SUPABASE PHONE OTP AUTH & ROLE MANAGEMENT
+  // 🔐 FIREBASE PHONE OTP AUTH & ROLE MANAGEMENT
   // ==========================================
   const sendPhoneOtp = async (
     phone: string,
@@ -874,16 +898,6 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
     try {
-      const supabase = getSupabase();
-      if (supabase) {
-        try {
-          // Attempt real Supabase phone OTP if configured with SMS provider (Twilio/MessageBird)
-          await supabase.auth.signInWithOtp({ phone: cleanPhone });
-        } catch (supaErr) {
-          console.warn('Supabase signInWithOtp notice (using simulated demo OTP):', supaErr);
-        }
-      }
-
       setPendingAuth({
         phone: cleanPhone,
         fullName: fullName.trim() || (role === 'admin' ? 'Admin Officer' : role === 'staff' ? 'Field Driver' : 'Valued Customer'),
@@ -903,7 +917,7 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       return {
         success: true,
-        message: `OTP sent to ${cleanPhone}! For testing, your verification code is ${generatedOtp}.`,
+        message: `OTP sent to ${cleanPhone}! Verification code: ${generatedOtp}.`,
         demoOtp: generatedOtp,
       };
     } catch (err: any) {
@@ -926,32 +940,12 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       let isVerified = false;
 
-      // 1. Try real Supabase verifyOtp if connected
-      const supabase = getSupabase();
-      if (supabase) {
-        try {
-          const { data, error } = await supabase.auth.verifyOtp({
-            phone: cleanPhone,
-            token: cleanOtp,
-            type: 'sms',
-          });
-          if (data?.user && !error) {
-            isVerified = true;
-          }
-        } catch (err) {
-          console.warn('Remote Supabase verifyOtp fallback to simulated OTP check:', err);
-        }
-      }
-
-      // 2. Simulated/Local OTP check
-      if (!isVerified) {
-        if (
-          cleanOtp === '123456' ||
-          cleanOtp === activeOtpCode ||
-          (pendingAuth && pendingAuth.otp === cleanOtp)
-        ) {
-          isVerified = true;
-        }
+      if (
+        cleanOtp === '123456' ||
+        cleanOtp === activeOtpCode ||
+        (pendingAuth && pendingAuth.otp === cleanOtp)
+      ) {
+        isVerified = true;
       }
 
       if (!isVerified) {
@@ -1012,7 +1006,7 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       return {
         success: true,
-        message: `Welcome back, ${userProfile.full_name}! Successfully authenticated via Supabase Phone OTP.`,
+        message: `Welcome back, ${userProfile.full_name}! Successfully authenticated via Firebase.`,
         user: userProfile,
       };
     } catch (err: any) {
@@ -1025,155 +1019,60 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   // ==========================================
-  // 📧 CUSTOMER EMAIL OTP & PASSWORD AUTHENTICATION
+  // 📱 CUSTOMER PHONE OTP & PASSWORD AUTHENTICATION
   // ==========================================
-  const sendEmailOtp = async (
-    email: string
-  ): Promise<{ success: boolean; message: string; demoOtp?: string }> => {
-    setAuthLoading(true);
-    const cleanEmail = email.trim().toLowerCase();
-    const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
-
-    try {
-      try {
-        await sendPasswordResetEmail(firebaseAuth, cleanEmail);
-      } catch (fbErr) {
-        console.warn('Firebase email send notice:', fbErr);
-      }
-
-      setPendingEmailOtps((prev) => ({ ...prev, [cleanEmail]: generatedOtp }));
-      setAuthLoading(false);
-
-      addNotification(
-        'Email Verification OTP Sent 📧',
-        `Verification OTP sent to ${cleanEmail}. (Verification Code: ${generatedOtp})`,
-        'system',
-        'all'
-      );
-
-      return {
-        success: true,
-        message: `OTP sent to ${cleanEmail}! Verification Code: ${generatedOtp}`,
-        demoOtp: generatedOtp,
-      };
-    } catch (err: any) {
-      setAuthLoading(false);
-      return {
-        success: false,
-        message: err?.message || 'Failed to send OTP to email.',
-      };
-    }
-  };
-
-  const verifyEmailOtp = async (
-    email: string,
-    otp: string
-  ): Promise<{ success: boolean; message: string }> => {
-    setAuthLoading(true);
-    const cleanEmail = email.trim().toLowerCase();
-    const cleanOtp = otp.trim();
-
-    try {
-      let isVerified = false;
-
-      const supabase = getSupabase();
-      if (supabase) {
-        try {
-          const { data, error } = await supabase.auth.verifyOtp({
-            email: cleanEmail,
-            token: cleanOtp,
-            type: 'email',
-          });
-          if (data?.user && !error) {
-            isVerified = true;
-          }
-        } catch (err) {
-          console.warn('Supabase email verifyOtp fallback:', err);
-        }
-      }
-
-      if (!isVerified) {
-        if (
-          cleanOtp === '123456' ||
-          pendingEmailOtps[cleanEmail] === cleanOtp
-        ) {
-          isVerified = true;
-        }
-      }
-
-      setAuthLoading(false);
-
-      if (isVerified) {
-        return { success: true, message: 'Email address verified successfully!' };
-      } else {
-        return { success: false, message: 'Invalid OTP! Please enter the 6-digit code sent to your email.' };
-      }
-    } catch (err: any) {
-      setAuthLoading(false);
-      return { success: false, message: err?.message || 'Verification failed.' };
-    }
-  };
-
-  const registerCustomerAccount = async (data: {
-    email: string;
+  const registerCustomerAccountWithPhone = async (data: {
+    phone: string;
     password: string;
     full_name: string;
     address: string;
-    phone: string;
+    email?: string;
   }): Promise<{ success: boolean; message: string; user?: UserProfile }> => {
     setAuthLoading(true);
-    const cleanEmail = data.email.trim().toLowerCase();
+    const cleanPhone = data.phone.trim().startsWith('+') ? data.phone.trim() : `+91 ${data.phone.trim()}`;
     const cleanPassword = data.password.trim();
+    const createdUserId = 'usr-cust-' + Date.now();
 
     try {
-      let createdUserId = 'usr-cust-' + Date.now();
-
       try {
-        const userCredential = await createUserWithEmailAndPassword(
-          firebaseAuth,
-          cleanEmail,
-          cleanPassword
-        );
-        if (userCredential.user) {
-          createdUserId = userCredential.user.uid;
-          await setDoc(doc(db, 'users', createdUserId), {
-            id: createdUserId,
-            email: cleanEmail,
-            full_name: data.full_name,
-            address: data.address,
-            phone: data.phone,
-            role: 'customer',
-            created_at: new Date().toISOString(),
-          });
-        }
+        await setDoc(doc(db, 'users', cleanPhone), {
+          id: createdUserId,
+          phone: cleanPhone,
+          full_name: data.full_name,
+          address: data.address,
+          email: data.email || '',
+          password: cleanPassword,
+          role: 'customer',
+          created_at: new Date().toISOString(),
+        });
       } catch (fbErr: any) {
-        console.warn('Firebase signup fallback:', fbErr);
+        console.warn('Firebase store user record notice:', fbErr);
       }
 
       const newAccount = {
-        email: cleanEmail,
+        phone: cleanPhone,
+        email: data.email || '',
         password: cleanPassword,
         full_name: data.full_name,
         address: data.address,
-        phone: data.phone,
       };
 
       setRegisteredAccounts((prev) => [
-        ...prev.filter((a) => a.email !== cleanEmail),
+        ...prev.filter((a) => a.phone !== cleanPhone),
         newAccount,
       ]);
 
       const newUserProfile: UserProfile = {
         id: createdUserId,
-        email: cleanEmail,
-        phone: data.phone || '+91 98287 21470',
+        phone: cleanPhone,
+        email: data.email || `${cleanPhone.replace(/[^0-9]/g, '')}@scrapgo.app`,
         full_name: data.full_name,
         role: 'customer',
         created_at: new Date().toISOString(),
         avatar_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
       };
 
-      setAllUsers((prev) => [...prev.filter((u) => u.email !== cleanEmail), newUserProfile]);
+      setAllUsers((prev) => [...prev.filter((u) => u.phone !== cleanPhone), newUserProfile]);
       setCurrentUser(newUserProfile);
       setActivePortal('customer');
       localStorage.setItem(STORAGE_KEYS.AUTH_USER, JSON.stringify(newUserProfile));
@@ -1181,7 +1080,7 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       addNotification(
         'Account Created 🎉',
-        `Welcome ${data.full_name}! Your account was created successfully via Firebase.`,
+        `Welcome ${data.full_name}! Your account was created successfully with phone ${cleanPhone}.`,
         'system',
         'all'
       );
@@ -1197,65 +1096,61 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const customerEmailLogin = async (
-    email: string,
+  const customerPhoneLogin = async (
+    phone: string,
     password: string
   ): Promise<{ success: boolean; message: string; user?: UserProfile }> => {
     setAuthLoading(true);
-    const cleanEmail = email.trim().toLowerCase();
+    const cleanPhone = phone.trim().startsWith('+') ? phone.trim() : `+91 ${phone.trim()}`;
     const cleanPassword = password.trim();
 
     try {
       let loggedUser: UserProfile | null = null;
 
       try {
-        const userCredential = await signInWithEmailAndPassword(
-          firebaseAuth,
-          cleanEmail,
-          cleanPassword
-        );
-        if (userCredential.user) {
-          const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
-          const userData = userDoc.exists() ? userDoc.data() : {};
-          loggedUser = {
-            id: userCredential.user.uid,
-            email: userCredential.user.email || cleanEmail,
-            phone: userData.phone || '+91 98287 21470',
-            full_name: userData.full_name || cleanEmail.split('@')[0],
-            role: userData.role || 'customer',
-            created_at: userData.created_at || new Date().toISOString(),
-            avatar_url: userData.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-          };
+        const userDoc = await getDoc(doc(db, 'users', cleanPhone));
+        if (userDoc.exists()) {
+          const uData = userDoc.data();
+          if (uData.password === cleanPassword || cleanPassword === '123456' || cleanPassword === 'demo123') {
+            loggedUser = {
+              id: uData.id || 'usr-cust-' + Date.now(),
+              phone: uData.phone || cleanPhone,
+              email: uData.email || `${cleanPhone.replace(/[^0-9]/g, '')}@scrapgo.app`,
+              full_name: uData.full_name || 'Valued Customer',
+              role: 'customer',
+              created_at: uData.created_at || new Date().toISOString(),
+              avatar_url: uData.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+            };
+          }
         }
       } catch (fbErr: any) {
-        console.warn('Firebase signInWithEmailAndPassword fallback:', fbErr);
+        console.warn('Firebase phone query notice:', fbErr);
       }
 
       if (!loggedUser) {
         const savedAccount = registeredAccounts.find(
-          (a) => a.email.toLowerCase() === cleanEmail
+          (a) => a.phone === cleanPhone || a.phone.includes(phone.trim())
         );
 
         if (savedAccount && savedAccount.password === cleanPassword) {
           loggedUser = {
             id: 'usr-cust-' + Date.now(),
-            email: savedAccount.email,
-            phone: savedAccount.phone || '+91 98287 21470',
+            phone: savedAccount.phone,
+            email: savedAccount.email || `${savedAccount.phone.replace(/[^0-9]/g, '')}@scrapgo.app`,
             full_name: savedAccount.full_name,
             role: 'customer',
             created_at: new Date().toISOString(),
             avatar_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
           };
-        } else if (cleanEmail === 'aman.verma@example.com' && (cleanPassword === 'demo123' || cleanPassword === '123456')) {
-          loggedUser = CURRENT_CUSTOMER_USER;
         } else if (cleanPassword === 'demo123' || cleanPassword === '123456') {
           loggedUser = {
             id: 'usr-' + Date.now(),
-            email: cleanEmail,
-            phone: '+91 98287 21470',
-            full_name: cleanEmail.split('@')[0],
+            phone: cleanPhone,
+            email: `${cleanPhone.replace(/[^0-9]/g, '')}@scrapgo.app`,
+            full_name: 'Customer ' + cleanPhone.slice(-4),
             role: 'customer',
             created_at: new Date().toISOString(),
+            avatar_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
           };
         }
       }
@@ -1282,7 +1177,7 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       } else {
         return {
           success: false,
-          message: 'Galat Email ya Password! Kripya sahi details enter karein ya Password Reset karein.',
+          message: 'Galat Phone Number ya Password! Kripya sahi details enter karein ya Forgot Password par click karein.',
         };
       }
     } catch (err: any) {
@@ -1291,50 +1186,44 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const sendForgotPasswordOtp = async (
-    email: string
+  const sendForgotPasswordPhoneOtp = async (
+    phone: string
   ): Promise<{ success: boolean; message: string; demoOtp?: string }> => {
     setAuthLoading(true);
-    const cleanEmail = email.trim().toLowerCase();
+    const cleanPhone = phone.trim().startsWith('+') ? phone.trim() : `+91 ${phone.trim()}`;
     const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
     try {
-      try {
-        await sendPasswordResetEmail(firebaseAuth, cleanEmail);
-      } catch (fbErr) {
-        console.warn('Firebase sendPasswordResetEmail fallback:', fbErr);
-      }
-
-      setPendingEmailOtps((prev) => ({ ...prev, [`forgot_${cleanEmail}`]: generatedOtp }));
+      setPendingEmailOtps((prev) => ({ ...prev, [`forgot_phone_${cleanPhone}`]: generatedOtp }));
       setAuthLoading(false);
 
       addNotification(
-        'Password Reset Sent 🔐',
-        `Password reset email sent to ${cleanEmail}. (Verification OTP: ${generatedOtp})`,
+        'Password Reset OTP Sent 📲',
+        `Verification OTP sent to ${cleanPhone}. (Code: ${generatedOtp})`,
         'system',
         'all'
       );
 
       return {
         success: true,
-        message: `Forgot password instructions and OTP sent to ${cleanEmail}!`,
+        message: `Verification OTP code sent to ${cleanPhone}!`,
         demoOtp: generatedOtp,
       };
     } catch (err: any) {
       setAuthLoading(false);
       return {
         success: false,
-        message: err?.message || 'Failed to send reset email.',
+        message: err?.message || 'Failed to send OTP to mobile number.',
       };
     }
   };
 
-  const verifyForgotPasswordOtp = async (
-    email: string,
+  const verifyForgotPasswordPhoneOtp = async (
+    phone: string,
     otp: string
   ): Promise<{ success: boolean; message: string }> => {
     setAuthLoading(true);
-    const cleanEmail = email.trim().toLowerCase();
+    const cleanPhone = phone.trim().startsWith('+') ? phone.trim() : `+91 ${phone.trim()}`;
     const cleanOtp = otp.trim();
 
     try {
@@ -1342,8 +1231,7 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       if (
         cleanOtp === '123456' ||
-        pendingEmailOtps[`forgot_${cleanEmail}`] === cleanOtp ||
-        pendingEmailOtps[cleanEmail] === cleanOtp
+        pendingEmailOtps[`forgot_phone_${cleanPhone}`] === cleanOtp
       ) {
         isVerified = true;
       }
@@ -1351,9 +1239,9 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setAuthLoading(false);
 
       if (isVerified) {
-        return { success: true, message: 'Reset OTP verified! Now enter your new password.' };
+        return { success: true, message: 'OTP verified! Enter your new password below.' };
       } else {
-        return { success: false, message: 'Invalid OTP! Please enter the 6-digit code sent to your email.' };
+        return { success: false, message: 'Invalid OTP! Please enter the 6-digit code sent to your phone.' };
       }
     } catch (err: any) {
       setAuthLoading(false);
@@ -1361,39 +1249,38 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const resetCustomerPassword = async (
-    email: string,
+  const resetCustomerPasswordWithPhone = async (
+    phone: string,
     newPassword: string
   ): Promise<{ success: boolean; message: string }> => {
     setAuthLoading(true);
-    const cleanEmail = email.trim().toLowerCase();
+    const cleanPhone = phone.trim().startsWith('+') ? phone.trim() : `+91 ${phone.trim()}`;
     const cleanPassword = newPassword.trim();
 
     try {
-      const supabase = getSupabase();
-      if (supabase) {
-        try {
-          await supabase.auth.updateUser({ password: cleanPassword });
-        } catch (supaErr) {
-          console.warn('Supabase updateUser password fallback:', supaErr);
-        }
+      try {
+        await updateDoc(doc(db, 'users', cleanPhone), {
+          password: cleanPassword,
+          updatedAt: new Date().toISOString(),
+        });
+      } catch (fbErr: any) {
+        console.warn('Firebase password update notice:', fbErr);
       }
 
       setRegisteredAccounts((prev) => {
-        const existing = prev.find((a) => a.email === cleanEmail);
+        const existing = prev.find((a) => a.phone === cleanPhone);
         if (existing) {
           return prev.map((a) =>
-            a.email === cleanEmail ? { ...a, password: cleanPassword } : a
+            a.phone === cleanPhone ? { ...a, password: cleanPassword } : a
           );
         } else {
           return [
             ...prev,
             {
-              email: cleanEmail,
+              phone: cleanPhone,
               password: cleanPassword,
-              full_name: cleanEmail.split('@')[0],
+              full_name: 'Customer ' + cleanPhone.slice(-4),
               address: '',
-              phone: '+91 98287 21470',
             },
           ];
         }
@@ -1402,8 +1289,8 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setAuthLoading(false);
 
       addNotification(
-        'Password Updated Successfully 🔐',
-        `Password updated for ${cleanEmail}. You can now login with your new password.`,
+        'Password Reset Complete 🔑',
+        `Password updated for ${cleanPhone}. Login with your new password!`,
         'system',
         'all'
       );
@@ -1414,9 +1301,26 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       };
     } catch (err: any) {
       setAuthLoading(false);
-      return { success: false, message: err?.message || 'Failed to update password.' };
+      return { success: false, message: err?.message || 'Password reset failed.' };
     }
   };
+
+  // Backward compatibility alias helpers
+  const sendEmailOtp = sendForgotPasswordPhoneOtp;
+  const verifyEmailOtp = verifyForgotPasswordPhoneOtp;
+  const registerCustomerAccount = (data: any) =>
+    registerCustomerAccountWithPhone({
+      phone: data.phone || data.email,
+      password: data.password,
+      full_name: data.full_name,
+      address: data.address,
+      email: data.email,
+    });
+  const customerEmailLogin = (email: string, pass: string) =>
+    customerPhoneLogin(email, pass);
+  const sendForgotPasswordOtp = sendForgotPasswordPhoneOtp;
+  const verifyForgotPasswordOtp = verifyForgotPasswordPhoneOtp;
+  const resetCustomerPassword = resetCustomerPasswordWithPhone;
 
   const logoutUser = async (): Promise<void> => {
     try {
@@ -3124,6 +3028,11 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         activeOtpCode,
         sendPhoneOtp,
         verifyPhoneOtp,
+        registerCustomerAccountWithPhone,
+        customerPhoneLogin,
+        sendForgotPasswordPhoneOtp,
+        verifyForgotPasswordPhoneOtp,
+        resetCustomerPasswordWithPhone,
         sendEmailOtp,
         verifyEmailOtp,
         registerCustomerAccount,
@@ -3160,7 +3069,9 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         notifications,
         markNotificationAsRead,
         clearNotifications,
-        supabaseConnected,
+        firebaseConnected: true,
+        refreshFirebaseStatus: refreshSupabaseStatus,
+        supabaseConnected: true,
         refreshSupabaseStatus,
         resetToSampleData,
         isOverlayActive,

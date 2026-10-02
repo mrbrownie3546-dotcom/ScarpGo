@@ -1,12 +1,17 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+// Deprecated: Migrated fully to Firebase Auth and Cloud Firestore.
+// Re-exporting dummy objects to prevent breakage if imported by third-party modules.
 
-// Read Supabase credentials from Vite environment variables (defined in .env.example)
-const supabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL || 'https://your-project-id.supabase.co';
-const supabaseAnonKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || 'your-anon-public-key';
+export const supabase = {
+  auth: {
+    signInWithPassword: async () => ({ data: null, error: new Error("Migrated to Firebase Auth") }),
+    signUp: async () => ({ data: null, error: new Error("Migrated to Firebase Auth") }),
+    signInWithOtp: async () => ({ data: null, error: new Error("Migrated to Firebase Auth") }),
+    verifyOtp: async () => ({ data: null, error: new Error("Migrated to Firebase Auth") }),
+    updateUser: async () => ({ data: null, error: new Error("Migrated to Firebase Auth") }),
+  }
+} as any;
 
-export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey);
-
-export function getSupabaseClient(): SupabaseClient {
+export function getSupabaseClient() {
   return supabase;
 }
 

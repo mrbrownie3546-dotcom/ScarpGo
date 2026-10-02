@@ -7,6 +7,7 @@ import {
   ShieldAlert,
   Bell,
   Database,
+  Flame,
   CheckCircle2,
   ExternalLink,
   ChevronDown,
@@ -24,7 +25,7 @@ import {
   Sun,
   Moon,
 } from 'lucide-react';
-import { SupabaseModal } from './SupabaseModal';
+import { FirebaseModal } from './FirebaseModal';
 import { AuthModal } from './AuthModal';
 import { ScrapGoMenuDrawer } from './ScrapGoMenuDrawer';
 
@@ -117,19 +118,15 @@ export const Header: React.FC = () => {
 
           {/* Right Action Badges */}
           <div className="flex items-center gap-2.5 ml-auto">
-            {/* Supabase Status Pill */}
+            {/* Firebase Status Pill */}
             <button
               onClick={() => setShowSupabaseModal(true)}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md font-medium text-[11px] transition-colors border ${
-                supabaseConnected
-                  ? 'bg-emerald-950/70 border-emerald-500/40 text-emerald-400 hover:bg-emerald-900/60'
-                  : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-emerald-500/40 hover:text-white'
-              }`}
-              title="Click to view Supabase database SQL and credentials"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md font-medium text-[11px] transition-colors border bg-orange-950/60 border-orange-500/40 text-orange-300 hover:bg-orange-900/60"
+              title="Click to view Firebase Auth & Firestore Status"
             >
-              <Database className={`w-3.5 h-3.5 ${supabaseConnected ? 'text-emerald-400' : 'text-emerald-500'}`} />
-              <span>{supabaseConnected ? 'Supabase Connected' : 'Supabase SQL Ready'}</span>
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <Flame className="w-3.5 h-3.5 text-orange-400" />
+              <span>Firebase Active</span>
+              <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse"></span>
             </button>
 
             {/* Supabase User & Phone OTP Login Button */}
@@ -456,9 +453,9 @@ export const Header: React.FC = () => {
         />
       )}
 
-      {/* Supabase SQL & Connection Modal */}
+      {/* Firebase Status & Connection Modal */}
       {showSupabaseModal && (
-        <SupabaseModal onClose={() => setShowSupabaseModal(false)} />
+        <FirebaseModal onClose={() => setShowSupabaseModal(false)} />
       )}
 
       {/* Supabase Phone OTP Authentication Modal */}

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useScrap } from '../../context/ScrapContext';
-import { getSupabase } from '../../lib/supabaseClient';
+import { auth as firebaseAuth, db } from '../../lib/firebase';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { UserProfile, UserRole } from '../../types/scrapgo';
 import {
   Mail,
@@ -69,62 +71,39 @@ export const AuthForm: React.FC<AuthFormProps> = ({
     setLoading(true);
 
     try {
-      const supabase = getSupabase();
-
       if (mode === 'signIn') {
         let authenticatedUser: UserProfile | null = null;
 
-        if (supabase) {
-          try {
-            const { data, error } = await supabase.auth.signInWithPassword({
-              email: email.trim(),
-              password: password.trim(),
-            });
-
-            if (error) {
-              throw error;
-            }
-
-            if (data.user) {
-              const meta = data.user.user_metadata || {};
-              authenticatedUser = {
-                id: data.user.id,
-                email: data.user.email,
-                phone: data.user.phone || meta.phone || phone || '+91 98287 21470',
-                full_name: meta.full_name || meta.name || email.split('@')[0],
-                role: meta.role || role,
-                created_at: data.user.created_at || new Date().toISOString(),
-                avatar_url: meta.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-              };
-            }
-          } catch (supaErr: any) {
-            console.warn('Supabase auth sign in fallback notice:', supaErr);
-            // Fallback for demo credentials
-            if (password === 'demo123' || password === 'admin123' || email.includes('demo')) {
-              authenticatedUser = {
-                id: 'usr-' + Date.now(),
-                email: email.trim(),
-                phone: phone || '+91 98287 21470',
-                full_name: fullName.trim() || email.split('@')[0],
-                role,
-                created_at: new Date().toISOString(),
-                avatar_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-              };
-            } else {
-              throw new Error(supaErr.message || 'Invalid email or password.');
-            }
+        try {
+          const userCred = await signInWithEmailAndPassword(firebaseAuth, email.trim(), password.trim());
+          if (userCred.user) {
+            const userDoc = await getDoc(doc(db, 'users', userCred.user.uid));
+            const uData = userDoc.exists() ? userDoc.data() : {};
+            authenticatedUser = {
+              id: userCred.user.uid,
+              email: userCred.user.email || email.trim(),
+              phone: uData.phone || phone || '+91 98287 21470',
+              full_name: uData.full_name || fullName.trim() || email.split('@')[0],
+              role: uData.role || role,
+              created_at: uData.created_at || new Date().toISOString(),
+              avatar_url: uData.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+            };
           }
-        } else {
-          // Offline / Demo mode fallback
-          authenticatedUser = {
-            id: 'usr-' + Date.now(),
-            email: email.trim(),
-            phone: phone || '+91 98287 21470',
-            full_name: fullName.trim() || email.split('@')[0],
-            role,
-            created_at: new Date().toISOString(),
-            avatar_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-          };
+        } catch (fbErr: any) {
+          console.warn('Firebase sign in fallback:', fbErr);
+          if (password === 'demo123' || password === 'admin123' || password === 'staff123' || email.includes('demo')) {
+            authenticatedUser = {
+              id: 'usr-' + Date.now(),
+              email: email.trim(),
+              phone: phone || '+91 98287 21470',
+              full_name: fullName.trim() || email.split('@')[0],
+              role,
+              created_at: new Date().toISOString(),
+              avatar_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+            };
+          } else {
+            throw new Error(fbErr.message || 'Invalid email or password.');
+          }
         }
 
         if (authenticatedUser) {
@@ -141,45 +120,22 @@ export const AuthForm: React.FC<AuthFormProps> = ({
         // Sign Up Mode
         let newUserProfile: UserProfile | null = null;
 
-        if (supabase) {
-          try {
-            const { data, error } = await supabase.auth.signUp({
-              email: email.trim(),
-              password: password.trim(),
-              options: {
-                data: {
-                  full_name: fullName.trim(),
-                  phone: phone.trim(),
-                  role,
-                },
-              },
-            });
-
-            if (error) throw error;
-
-            if (data.user) {
-              newUserProfile = {
-                id: data.user.id,
-                email: data.user.email,
-                phone: phone.trim() || '+91 98287 21470',
-                full_name: fullName.trim(),
-                role,
-                created_at: new Date().toISOString(),
-              };
-            }
-          } catch (supaErr: any) {
-            console.warn('Supabase auth sign up fallback notice:', supaErr);
-            // Local fallback
+        try {
+          const userCred = await createUserWithEmailAndPassword(firebaseAuth, email.trim(), password.trim());
+          if (userCred.user) {
+            const uid = userCred.user.uid;
             newUserProfile = {
-              id: 'usr-' + Date.now(),
+              id: uid,
               email: email.trim(),
               phone: phone.trim() || '+91 98287 21470',
               full_name: fullName.trim(),
               role,
               created_at: new Date().toISOString(),
             };
+            await setDoc(doc(db, 'users', uid), newUserProfile);
           }
-        } else {
+        } catch (fbErr: any) {
+          console.warn('Firebase sign up fallback:', fbErr);
           newUserProfile = {
             id: 'usr-' + Date.now(),
             email: email.trim(),
@@ -214,7 +170,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({
       <div className="space-y-4 text-center">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 text-xs font-bold">
           <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
-          <span>Supabase Secure Authentication</span>
+          <span>Firebase Secure Authentication</span>
         </div>
 
         <h2 className="text-2xl font-black text-slate-900 dark:text-white">

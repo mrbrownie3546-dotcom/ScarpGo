@@ -40,13 +40,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setActivePortal,
     authLoading,
     setOverlayActive,
-    sendEmailOtp,
-    verifyEmailOtp,
-    registerCustomerAccount,
-    customerEmailLogin,
-    sendForgotPasswordOtp,
-    verifyForgotPasswordOtp,
-    resetCustomerPassword,
+    sendPhoneOtp,
+    verifyPhoneOtp,
+    registerCustomerAccountWithPhone,
+    customerPhoneLogin,
+    sendForgotPasswordPhoneOtp,
+    verifyForgotPasswordPhoneOtp,
+    resetCustomerPasswordWithPhone,
   } = useScrap();
 
   useEffect(() => {
@@ -62,20 +62,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   // Customer Auth Flow States
   const [customerAuthMode, setCustomerAuthMode] = useState<'login' | 'register' | 'forgotPassword'>('login');
   
-  // Registration Steps: 'email' -> 'otp' -> 'details'
-  const [registerStep, setRegisterStep] = useState<'email' | 'otp' | 'details'>('email');
+  // Registration Steps: 'phone' -> 'otp' -> 'details'
+  const [registerStep, setRegisterStep] = useState<'phone' | 'otp' | 'details'>('phone');
   
-  // Forgot Password Steps: 'email' -> 'otp' -> 'newPassword'
-  const [forgotStep, setForgotStep] = useState<'email' | 'otp' | 'newPassword'>('email');
+  // Forgot Password Steps: 'phone' -> 'otp' -> 'newPassword'
+  const [forgotStep, setForgotStep] = useState<'phone' | 'otp' | 'newPassword'>('phone');
 
-  // Form Input States - Initialized Empty
+  // Form Input States
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
 
-  // Email OTP Code Digits
+  // OTP Code Digits
   const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
   const [demoOtpHint, setDemoOtpHint] = useState<string | null>(null);
 
@@ -97,8 +97,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setOtpDigits(['', '', '', '', '', '']);
     setErrorMsg(null);
     setSuccessMsg(null);
-    setRegisterStep('email');
-    setForgotStep('email');
+    setRegisterStep('phone');
+    setForgotStep('phone');
   };
 
   const handleSelectRole = (r: UserRole) => {
@@ -121,20 +121,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   };
 
   // ==========================================
-  // 1. CUSTOMER LOGIN (EMAIL & PASSWORD)
+  // 1. CUSTOMER LOGIN (PHONE & PASSWORD)
   // ==========================================
   const handleCustomerLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
     setSuccessMsg(null);
 
-    if (!email.trim() || !password.trim()) {
-      setErrorMsg('Kripya apna registered Email aur Password enter karein.');
+    if (!phone.trim() || !password.trim()) {
+      setErrorMsg('Kripya apna Phone Number aur Password enter karein.');
       return;
     }
 
     setLoading(true);
-    const res = await customerEmailLogin(email, password);
+    const res = await customerPhoneLogin(phone, password);
     setLoading(false);
 
     if (res.success && res.user) {
@@ -150,28 +150,28 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   };
 
   // ==========================================
-  // 2. CUSTOMER REGISTRATION (EMAIL OTP -> DETAILS)
+  // 2. CUSTOMER REGISTRATION (PHONE OTP -> DETAILS)
   // ==========================================
-  const handleRegisterSendEmailOtp = async (e: React.FormEvent) => {
+  const handleRegisterSendPhoneOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
 
-    if (!email.trim() || !email.includes('@')) {
-      setErrorMsg('Kripya valid Email Address enter karein.');
+    if (!phone.trim() || phone.trim().length < 10) {
+      setErrorMsg('Kripya valid 10-digit Mobile Phone Number enter karein.');
       return;
     }
 
-    const res = await sendEmailOtp(email);
+    const res = await sendPhoneOtp(phone);
     if (res.success) {
       setRegisterStep('otp');
       if (res.demoOtp) setDemoOtpHint(res.demoOtp);
-      setSuccessMsg(`OTP sent to ${email}. Check inbox / verification code below.`);
+      setSuccessMsg(`OTP sent to ${phone}. Check SMS / verification code.`);
     } else {
       setErrorMsg(res.message);
     }
   };
 
-  const handleRegisterVerifyEmailOtp = async (e: React.FormEvent) => {
+  const handleRegisterVerifyPhoneOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
     const enteredOtp = otpDigits.join('');
@@ -181,10 +181,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       return;
     }
 
-    const res = await verifyEmailOtp(email, enteredOtp);
+    const res = await verifyPhoneOtp(phone, enteredOtp);
     if (res.success) {
       setRegisterStep('details');
-      setSuccessMsg('Email successfully verified! Fill in your details below to finish setup.');
+      setSuccessMsg('Phone number verified! Fill in your details and set password below.');
     } else {
       setErrorMsg(res.message);
     }
@@ -199,12 +199,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       return;
     }
 
-    const res = await registerCustomerAccount({
-      email,
+    const res = await registerCustomerAccountWithPhone({
+      phone,
       password,
       full_name: fullName,
       address,
-      phone,
+      email,
     });
 
     if (res.success && res.user) {
@@ -220,28 +220,28 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   };
 
   // ==========================================
-  // 3. CUSTOMER FORGOT PASSWORD (EMAIL OTP -> NEW PASS)
+  // 3. CUSTOMER FORGOT PASSWORD (PHONE OTP -> NEW PASS)
   // ==========================================
-  const handleForgotSendOtp = async (e: React.FormEvent) => {
+  const handleForgotSendPhoneOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
 
-    if (!email.trim() || !email.includes('@')) {
-      setErrorMsg('Kripya apna registered Email enter karein.');
+    if (!phone.trim() || phone.trim().length < 10) {
+      setErrorMsg('Kripya apna registered Mobile Number enter karein.');
       return;
     }
 
-    const res = await sendForgotPasswordOtp(email);
+    const res = await sendForgotPasswordPhoneOtp(phone);
     if (res.success) {
       setForgotStep('otp');
       if (res.demoOtp) setDemoOtpHint(res.demoOtp);
-      setSuccessMsg(`Password reset OTP sent to ${email}.`);
+      setSuccessMsg(`Password reset OTP sent to ${phone}.`);
     } else {
       setErrorMsg(res.message);
     }
   };
 
-  const handleForgotVerifyOtp = async (e: React.FormEvent) => {
+  const handleForgotVerifyPhoneOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
     const enteredOtp = otpDigits.join('');
@@ -251,10 +251,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       return;
     }
 
-    const res = await verifyForgotPasswordOtp(email, enteredOtp);
+    const res = await verifyForgotPasswordPhoneOtp(phone, enteredOtp);
     if (res.success) {
       setForgotStep('newPassword');
-      setSuccessMsg('OTP Verified! Enter your new password.');
+      setSuccessMsg('OTP Verified! Enter your new password below.');
     } else {
       setErrorMsg(res.message);
     }
@@ -269,7 +269,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       return;
     }
 
-    const res = await resetCustomerPassword(email, newPassword);
+    const res = await resetCustomerPasswordWithPhone(phone, newPassword);
     if (res.success) {
       setCustomerAuthMode('login');
       setPassword(newPassword);
@@ -477,7 +477,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   type="button"
                   onClick={() => {
                     setCustomerAuthMode('register');
-                    setRegisterStep('email');
+                    setRegisterStep('phone');
                     setErrorMsg(null);
                     setSuccessMsg(null);
                   }}
@@ -491,21 +491,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </button>
               </div>
 
-              {/* A. CUSTOMER LOGIN MODE */}
+              {/* A. CUSTOMER LOGIN MODE (PHONE & PASSWORD) */}
               {customerAuthMode === 'login' && (
                 <form onSubmit={handleCustomerLoginSubmit} className="space-y-4 text-xs">
                   <div>
                     <label className="block font-bold text-slate-800 dark:text-slate-200 mb-1">
-                      Email Address
+                      Mobile Phone Number
                     </label>
                     <div className="relative">
-                      <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                       <input
-                        type="email"
+                        type="tel"
                         required
-                        placeholder="Enter registered email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="Enter 10-digit mobile number (+91)"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
                         className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
                       />
                     </div>
@@ -520,7 +520,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                         type="button"
                         onClick={() => {
                           setCustomerAuthMode('forgotPassword');
-                          setForgotStep('email');
+                          setForgotStep('phone');
                           setErrorMsg(null);
                           setSuccessMsg(null);
                         }}
@@ -534,7 +534,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       <input
                         type="password"
                         required
-                        placeholder="Enter password"
+                        placeholder="Enter account password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
@@ -562,23 +562,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </form>
               )}
 
-              {/* B. CUSTOMER REGISTER MODE (EMAIL OTP -> DETAILS) */}
+              {/* B. CUSTOMER REGISTER MODE (PHONE OTP -> DETAILS) */}
               {customerAuthMode === 'register' && (
                 <div>
-                  {registerStep === 'email' && (
-                    <form onSubmit={handleRegisterSendEmailOtp} className="space-y-4 text-xs">
+                  {registerStep === 'phone' && (
+                    <form onSubmit={handleRegisterSendPhoneOtp} className="space-y-4 text-xs">
                       <div>
                         <label className="block font-bold text-slate-800 dark:text-slate-200 mb-1">
-                          Email Address
+                          Mobile Phone Number
                         </label>
                         <div className="relative">
-                          <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                          <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                           <input
-                            type="email"
+                            type="tel"
                             required
-                            placeholder="Enter your email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="Enter 10-digit mobile number"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
                             className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
                           />
                         </div>
@@ -592,11 +592,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                         {authLoading ? (
                           <>
                             <Loader2 className="w-4 h-4 animate-spin" />
-                            <span>Sending Email OTP...</span>
+                            <span>Sending Mobile OTP...</span>
                           </>
                         ) : (
                           <>
-                            <span>Send Email Verification OTP</span>
+                            <span>Send Mobile Verification OTP</span>
                             <ArrowRight className="w-4 h-4" />
                           </>
                         )}
@@ -605,27 +605,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   )}
 
                   {registerStep === 'otp' && (
-                    <form onSubmit={handleRegisterVerifyEmailOtp} className="space-y-4 text-xs">
+                    <form onSubmit={handleRegisterVerifyPhoneOtp} className="space-y-4 text-xs">
                       <div className="text-center space-y-1">
                         <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center mx-auto mb-1">
                           <KeyRound className="w-5 h-5" />
                         </div>
-                        <h4 className="font-bold text-slate-900 dark:text-white text-sm">Enter 6-Digit Email OTP</h4>
+                        <h4 className="font-bold text-slate-900 dark:text-white text-sm">Enter 6-Digit Phone OTP</h4>
                         <p className="text-slate-500 text-[11px]">
-                          Verification code sent to <strong>{email}</strong>
+                          Verification code sent to <strong>{phone}</strong>
                         </p>
                       </div>
-
-                      <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 rounded-xl text-[11px] text-emerald-800 dark:text-emerald-300 leading-relaxed text-center">
-                        ✨ <strong>Instant Verification:</strong> Email inbox/spam check karein YA neeche diye gaye verification code ko enter karein:
-                      </div>
-
-                      {demoOtpHint && (
-                        <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs text-emerald-800 dark:text-emerald-300 font-mono flex items-center justify-between">
-                          <span>Verification OTP Code:</span>
-                          <strong className="text-sm font-black tracking-widest">{demoOtpHint}</strong>
-                        </div>
-                      )}
 
                       <div className="flex justify-center gap-2 py-1">
                         {otpDigits.map((digit, idx) => (
@@ -645,14 +634,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       <div className="flex justify-between items-center text-[11px]">
                         <button
                           type="button"
-                          onClick={() => setRegisterStep('email')}
+                          onClick={() => setRegisterStep('phone')}
                           className="text-emerald-600 font-bold hover:underline cursor-pointer"
                         >
-                          ← Change Email
+                          ← Change Phone
                         </button>
                         <button
                           type="button"
-                          onClick={handleRegisterSendEmailOtp}
+                          onClick={handleRegisterSendPhoneOtp}
                           className="text-slate-500 hover:text-slate-900 dark:hover:text-white cursor-pointer"
                         >
                           Resend OTP
@@ -714,15 +703,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
                       <div>
                         <label className="block font-bold text-slate-800 dark:text-slate-200 mb-1">
-                          Phone Number (Optional)
+                          Email Address (Optional)
                         </label>
                         <div className="relative">
-                          <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                          <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                           <input
-                            type="tel"
-                            placeholder="Enter 10-digit mobile number"
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
+                            type="email"
+                            placeholder="Enter email (optional)"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
                             className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
                           />
                         </div>
@@ -737,7 +726,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                           <input
                             type="password"
                             required
-                            placeholder="Create password"
+                            placeholder="Create password for future logins"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
@@ -767,20 +756,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               {/* C. CUSTOMER FORGOT PASSWORD MODE */}
               {customerAuthMode === 'forgotPassword' && (
                 <div>
-                  {forgotStep === 'email' && (
-                    <form onSubmit={handleForgotSendOtp} className="space-y-4 text-xs">
+                  {forgotStep === 'phone' && (
+                    <form onSubmit={handleForgotSendPhoneOtp} className="space-y-4 text-xs">
                       <div>
                         <label className="block font-bold text-slate-800 dark:text-slate-200 mb-1">
-                          Registered Email Address
+                          Registered Mobile Phone Number
                         </label>
                         <div className="relative">
-                          <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                          <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                           <input
-                            type="email"
+                            type="tel"
                             required
-                            placeholder="Enter your registered email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="Enter your registered mobile number"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
                             className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
                           />
                         </div>
@@ -817,14 +806,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   )}
 
                   {forgotStep === 'otp' && (
-                    <form onSubmit={handleForgotVerifyOtp} className="space-y-4 text-xs">
+                    <form onSubmit={handleForgotVerifyPhoneOtp} className="space-y-4 text-xs">
                       <div className="text-center space-y-1">
                         <div className="w-10 h-10 rounded-2xl bg-amber-100 dark:bg-amber-950 text-amber-600 flex items-center justify-center mx-auto mb-1">
                           <KeyRound className="w-5 h-5" />
                         </div>
                         <h4 className="font-bold text-slate-900 dark:text-white text-sm">Enter Forgot Password OTP</h4>
                         <p className="text-slate-500 text-[11px]">
-                          Reset OTP code sent to <strong>{email}</strong>
+                          Reset OTP code sent to <strong>{phone}</strong>
                         </p>
                       </div>
 
@@ -846,14 +835,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       <div className="flex justify-between items-center text-[11px]">
                         <button
                           type="button"
-                          onClick={() => setForgotStep('email')}
+                          onClick={() => setForgotStep('phone')}
                           className="text-emerald-600 font-bold hover:underline cursor-pointer"
                         >
-                          ← Change Email
+                          ← Change Phone Number
                         </button>
                         <button
                           type="button"
-                          onClick={handleForgotSendOtp}
+                          onClick={handleForgotSendPhoneOtp}
                           className="text-slate-500 hover:text-slate-900 dark:hover:text-white cursor-pointer"
                         >
                           Resend Reset OTP

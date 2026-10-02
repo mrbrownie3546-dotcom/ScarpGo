@@ -42,21 +42,21 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
     setCurrentUser,
     setActivePortal,
     authLoading,
-    sendEmailOtp,
-    verifyEmailOtp,
-    registerCustomerAccount,
-    customerEmailLogin,
-    sendForgotPasswordOtp,
-    verifyForgotPasswordOtp,
-    resetCustomerPassword,
+    sendPhoneOtp,
+    verifyPhoneOtp,
+    registerCustomerAccountWithPhone,
+    customerPhoneLogin,
+    sendForgotPasswordPhoneOtp,
+    verifyForgotPasswordPhoneOtp,
+    resetCustomerPasswordWithPhone,
   } = useScrap();
 
   const [selectedRole, setSelectedRole] = useState<UserRole>(initialRole);
 
   // Customer Mode States
   const [customerAuthMode, setCustomerAuthMode] = useState<'login' | 'register' | 'forgotPassword'>('login');
-  const [registerStep, setRegisterStep] = useState<'email' | 'otp' | 'details'>('email');
-  const [forgotStep, setForgotStep] = useState<'email' | 'otp' | 'newPassword'>('email');
+  const [registerStep, setRegisterStep] = useState<'phone' | 'otp' | 'details'>('phone');
+  const [forgotStep, setForgotStep] = useState<'phone' | 'otp' | 'newPassword'>('phone');
 
   // Input states - initialized empty
   const [email, setEmail] = useState('');
@@ -83,8 +83,8 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
     setOtpDigits(['', '', '', '', '', '']);
     setErrorMsg(null);
     setSuccessMsg(null);
-    setRegisterStep('email');
-    setForgotStep('email');
+    setRegisterStep('phone');
+    setForgotStep('phone');
   };
 
   const handleRoleChange = (role: UserRole) => {
@@ -106,19 +106,19 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
     }
   };
 
-  // 1. Customer Email Login
+  // 1. Customer Phone Login
   const handleCustomerLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
     setSuccessMsg(null);
 
-    if (!email.trim() || !password.trim()) {
-      setErrorMsg('Kripya Email aur Password enter karein.');
+    if (!phone.trim() || !password.trim()) {
+      setErrorMsg('Kripya Phone Number aur Password enter karein.');
       return;
     }
 
     setLoading(true);
-    const res = await customerEmailLogin(email, password);
+    const res = await customerPhoneLogin(phone, password);
     setLoading(false);
 
     if (res.success && res.user) {
@@ -131,26 +131,26 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
   };
 
   // 2. Customer Registration Flow
-  const handleRegisterSendEmailOtp = async (e: React.FormEvent) => {
+  const handleRegisterSendPhoneOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
 
-    if (!email.trim() || !email.includes('@')) {
-      setErrorMsg('Kripya valid Email Address enter karein.');
+    if (!phone.trim() || phone.trim().length < 10) {
+      setErrorMsg('Kripya valid 10-digit Mobile Phone Number enter karein.');
       return;
     }
 
-    const res = await sendEmailOtp(email);
+    const res = await sendPhoneOtp(phone);
     if (res.success) {
       setRegisterStep('otp');
       if (res.demoOtp) setDemoOtpHint(res.demoOtp);
-      setSuccessMsg(`OTP sent to ${email}. Check inbox / verification code below.`);
+      setSuccessMsg(`OTP sent to ${phone}. Check SMS / verification code below.`);
     } else {
       setErrorMsg(res.message);
     }
   };
 
-  const handleRegisterVerifyEmailOtp = async (e: React.FormEvent) => {
+  const handleRegisterVerifyPhoneOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
     const enteredOtp = otpDigits.join('');
@@ -160,10 +160,10 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
       return;
     }
 
-    const res = await verifyEmailOtp(email, enteredOtp);
+    const res = await verifyPhoneOtp(phone, enteredOtp);
     if (res.success) {
       setRegisterStep('details');
-      setSuccessMsg('Email verified! Enter details below to create account.');
+      setSuccessMsg('Phone verified! Enter details below to create account.');
     } else {
       setErrorMsg(res.message);
     }
@@ -178,12 +178,12 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
       return;
     }
 
-    const res = await registerCustomerAccount({
-      email,
+    const res = await registerCustomerAccountWithPhone({
+      phone,
       password,
       full_name: fullName,
       address,
-      phone,
+      email,
     });
 
     if (res.success && res.user) {
@@ -196,25 +196,26 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
   };
 
   // 3. Customer Forgot Password Flow
-  const handleForgotSendOtp = async (e: React.FormEvent) => {
+  const handleForgotSendPhoneOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
 
-    if (!email.trim() || !email.includes('@')) {
-      setErrorMsg('Kripya registered Email enter karein.');
+    if (!phone.trim() || phone.trim().length < 10) {
+      setErrorMsg('Kripya registered Mobile Number enter karein.');
       return;
     }
 
-    const res = await sendForgotPasswordOtp(email);
+    const res = await sendForgotPasswordPhoneOtp(phone);
     if (res.success) {
       setForgotStep('otp');
-      setSuccessMsg(`Password reset OTP sent to ${email}.`);
+      if (res.demoOtp) setDemoOtpHint(res.demoOtp);
+      setSuccessMsg(`Password reset OTP sent to ${phone}.`);
     } else {
       setErrorMsg(res.message);
     }
   };
 
-  const handleForgotVerifyOtp = async (e: React.FormEvent) => {
+  const handleForgotVerifyPhoneOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
     const enteredOtp = otpDigits.join('');
@@ -224,10 +225,10 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
       return;
     }
 
-    const res = await verifyForgotPasswordOtp(email, enteredOtp);
+    const res = await verifyForgotPasswordPhoneOtp(phone, enteredOtp);
     if (res.success) {
       setForgotStep('newPassword');
-      setSuccessMsg('OTP verified! Enter new password.');
+      setSuccessMsg('OTP Verified! Enter your new password below.');
     } else {
       setErrorMsg(res.message);
     }
@@ -238,11 +239,11 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
     setErrorMsg(null);
 
     if (!newPassword.trim() || newPassword.length < 4) {
-      setErrorMsg('Kripya naya password enter karein.');
+      setErrorMsg('Kripya kam se kam 4 characters ka naya password banayein.');
       return;
     }
 
-    const res = await resetCustomerPassword(email, newPassword);
+    const res = await resetCustomerPasswordWithPhone(phone, newPassword);
     if (res.success) {
       setCustomerAuthMode('login');
       setPassword(newPassword);
@@ -457,7 +458,7 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => { setCustomerAuthMode('register'); setRegisterStep('email'); setErrorMsg(null); setSuccessMsg(null); }}
+                onClick={() => { setCustomerAuthMode('register'); setRegisterStep('phone'); setErrorMsg(null); setSuccessMsg(null); }}
                 className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer ${
                   customerAuthMode === 'register'
                     ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
@@ -472,15 +473,15 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
             {customerAuthMode === 'login' && (
               <form onSubmit={handleCustomerLoginSubmit} className="space-y-4 text-xs">
                 <div>
-                  <label className="block font-bold text-slate-800 dark:text-slate-200 mb-1">Email Address</label>
+                  <label className="block font-bold text-slate-800 dark:text-slate-200 mb-1">Mobile Phone Number</label>
                   <div className="relative">
-                    <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
-                      type="email"
+                      type="tel"
                       required
-                      placeholder="Enter registered email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="Enter 10-digit mobile number (+91)"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
                       className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
                     />
                   </div>
@@ -491,7 +492,7 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
                     <label className="font-bold text-slate-800 dark:text-slate-200">Password</label>
                     <button
                       type="button"
-                      onClick={() => { setCustomerAuthMode('forgotPassword'); setForgotStep('email'); setErrorMsg(null); setSuccessMsg(null); }}
+                      onClick={() => { setCustomerAuthMode('forgotPassword'); setForgotStep('phone'); setErrorMsg(null); setSuccessMsg(null); }}
                       className="text-emerald-600 font-bold text-[11px] hover:underline cursor-pointer"
                     >
                       Forgot Password?
@@ -502,7 +503,7 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
                     <input
                       type="password"
                       required
-                      placeholder="Enter password"
+                      placeholder="Enter account password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
@@ -533,18 +534,18 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
             {/* Register */}
             {customerAuthMode === 'register' && (
               <div>
-                {registerStep === 'email' && (
-                  <form onSubmit={handleRegisterSendEmailOtp} className="space-y-4 text-xs">
+                {registerStep === 'phone' && (
+                  <form onSubmit={handleRegisterSendPhoneOtp} className="space-y-4 text-xs">
                     <div>
-                      <label className="block font-bold text-slate-800 dark:text-slate-200 mb-1">Email Address</label>
+                      <label className="block font-bold text-slate-800 dark:text-slate-200 mb-1">Mobile Phone Number</label>
                       <div className="relative">
-                        <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                         <input
-                          type="email"
+                          type="tel"
                           required
-                          placeholder="Enter your email"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="Enter 10-digit mobile number"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
                           className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
                         />
                       </div>
@@ -558,11 +559,11 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
                       {authLoading ? (
                         <>
                           <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>Sending OTP...</span>
+                          <span>Sending Mobile OTP...</span>
                         </>
                       ) : (
                         <>
-                          <span>Send Email Verification OTP</span>
+                          <span>Send Mobile Verification OTP</span>
                           <ArrowRight className="w-4 h-4" />
                         </>
                       )}
@@ -571,25 +572,14 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
                 )}
 
                 {registerStep === 'otp' && (
-                  <form onSubmit={handleRegisterVerifyEmailOtp} className="space-y-4 text-xs">
+                  <form onSubmit={handleRegisterVerifyPhoneOtp} className="space-y-4 text-xs">
                     <div className="text-center space-y-1">
                       <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 flex items-center justify-center mx-auto mb-1">
                         <KeyRound className="w-5 h-5" />
                       </div>
-                      <h4 className="font-bold text-slate-900 dark:text-white text-sm">Enter 6-Digit Email OTP</h4>
-                      <p className="text-slate-500 text-[11px]">Sent to <strong>{email}</strong></p>
+                      <h4 className="font-bold text-slate-900 dark:text-white text-sm">Enter 6-Digit Phone OTP</h4>
+                      <p className="text-slate-500 text-[11px]">Sent to <strong>{phone}</strong></p>
                     </div>
-
-                    <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 rounded-xl text-[11px] text-emerald-800 dark:text-emerald-300 leading-relaxed text-center">
-                      ✨ <strong>Instant Verification:</strong> Email inbox/spam check karein YA neeche diye gaye verification code ko enter karein:
-                    </div>
-
-                    {demoOtpHint && (
-                      <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs text-emerald-800 dark:text-emerald-300 font-mono flex items-center justify-between">
-                        <span>Verification OTP Code:</span>
-                        <strong className="text-sm font-black tracking-widest">{demoOtpHint}</strong>
-                      </div>
-                    )}
 
                     <div className="flex justify-center gap-2 py-1">
                       {otpDigits.map((digit, idx) => (
@@ -607,8 +597,8 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
                     </div>
 
                     <div className="flex justify-between items-center text-[11px]">
-                      <button type="button" onClick={() => setRegisterStep('email')} className="text-emerald-600 font-bold hover:underline cursor-pointer">← Change Email</button>
-                      <button type="button" onClick={handleRegisterSendEmailOtp} className="text-slate-500 hover:text-slate-900 dark:hover:text-white cursor-pointer">Resend OTP</button>
+                      <button type="button" onClick={() => setRegisterStep('phone')} className="text-emerald-600 font-bold hover:underline cursor-pointer">← Change Phone</button>
+                      <button type="button" onClick={handleRegisterSendPhoneOtp} className="text-slate-500 hover:text-slate-900 dark:hover:text-white cursor-pointer">Resend OTP</button>
                     </div>
 
                     <button
@@ -631,7 +621,7 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
                 {registerStep === 'details' && (
                   <form onSubmit={handleRegisterFinalSubmit} className="space-y-3 text-xs">
                     <div>
-                      <label className="block font-bold text-slate-800 dark:text-slate-200 mb-1">Full Name</label>
+                      <label className="block font-bold text-slate-800 dark:text-slate-200 mb-1">Full Name (Naam)</label>
                       <div className="relative">
                         <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                         <input type="text" required placeholder="Enter full name" value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500" />
@@ -647,10 +637,10 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
                     </div>
 
                     <div>
-                      <label className="block font-bold text-slate-800 dark:text-slate-200 mb-1">Phone Number (Optional)</label>
+                      <label className="block font-bold text-slate-800 dark:text-slate-200 mb-1">Email Address (Optional)</label>
                       <div className="relative">
-                        <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                        <input type="tel" placeholder="Enter 10-digit phone" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500" />
+                        <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input type="email" placeholder="Enter email (optional)" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500" />
                       </div>
                     </div>
 
@@ -658,7 +648,7 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
                       <label className="block font-bold text-slate-800 dark:text-slate-200 mb-1">Set Password</label>
                       <div className="relative">
                         <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                        <input type="password" required placeholder="Create password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500" />
+                        <input type="password" required placeholder="Create password for future logins" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500" />
                       </div>
                     </div>
 
@@ -684,13 +674,13 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
             {/* Forgot Password */}
             {customerAuthMode === 'forgotPassword' && (
               <div>
-                {forgotStep === 'email' && (
-                  <form onSubmit={handleForgotSendOtp} className="space-y-4 text-xs">
+                {forgotStep === 'phone' && (
+                  <form onSubmit={handleForgotSendPhoneOtp} className="space-y-4 text-xs">
                     <div>
-                      <label className="block font-bold text-slate-800 dark:text-slate-200 mb-1">Registered Email Address</label>
+                      <label className="block font-bold text-slate-800 dark:text-slate-200 mb-1">Registered Mobile Phone Number</label>
                       <div className="relative">
-                        <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                        <input type="email" required placeholder="Enter registered email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500" />
+                        <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input type="tel" required placeholder="Enter registered mobile number" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500" />
                       </div>
                     </div>
 
@@ -719,13 +709,13 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
                 )}
 
                 {forgotStep === 'otp' && (
-                  <form onSubmit={handleForgotVerifyOtp} className="space-y-4 text-xs">
+                  <form onSubmit={handleForgotVerifyPhoneOtp} className="space-y-4 text-xs">
                     <div className="text-center space-y-1">
                       <div className="w-10 h-10 rounded-2xl bg-amber-100 dark:bg-amber-950 text-amber-600 flex items-center justify-center mx-auto mb-1">
                         <KeyRound className="w-5 h-5" />
                       </div>
                       <h4 className="font-bold text-slate-900 dark:text-white text-sm">Enter Reset OTP</h4>
-                      <p className="text-slate-500 text-[11px]">Code sent to <strong>{email}</strong></p>
+                      <p className="text-slate-500 text-[11px]">Code sent to <strong>{phone}</strong></p>
                     </div>
 
                     <div className="flex justify-center gap-2 py-1">
@@ -735,8 +725,8 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
                     </div>
 
                     <div className="flex justify-between items-center text-[11px]">
-                      <button type="button" onClick={() => setForgotStep('email')} className="text-emerald-600 font-bold hover:underline cursor-pointer">← Change Email</button>
-                      <button type="button" onClick={handleForgotSendOtp} className="text-slate-500 hover:text-slate-900 dark:hover:text-white cursor-pointer">Resend OTP</button>
+                      <button type="button" onClick={() => setForgotStep('phone')} className="text-emerald-600 font-bold hover:underline cursor-pointer">← Change Phone</button>
+                      <button type="button" onClick={handleForgotSendPhoneOtp} className="text-slate-500 hover:text-slate-900 dark:hover:text-white cursor-pointer">Resend OTP</button>
                     </div>
 
                     <button
