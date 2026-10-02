@@ -396,6 +396,20 @@ export const Header: React.FC = () => {
 
             {activePortal === 'customer' ? (
               <>
+                {/* Customer Account / Login Button */}
+                <button
+                  onClick={() => {
+                    setAuthAllowedRoles(['customer', 'staff']);
+                    setAuthInitialRole('customer');
+                    setShowAuthModal(true);
+                  }}
+                  className="bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-emerald-300 font-bold text-xs sm:text-sm px-3 sm:px-3.5 py-2 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
+                  title="Customer Login / Create Account"
+                >
+                  <User className="w-4 h-4 text-emerald-600" />
+                  <span>{currentUser ? currentUser.full_name.split(' ')[0] : 'Login / Register'}</span>
+                </button>
+
                 <button
                   onClick={() => {
                     const el = document.getElementById('pickup-modal-trigger');

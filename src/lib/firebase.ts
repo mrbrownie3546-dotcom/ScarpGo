@@ -1,7 +1,11 @@
-import { initializeApp, getApps, getApp } from 'firebase/app';
+import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { 
   getAuth, 
+  Auth,
   GoogleAuthProvider, 
+  RecaptchaVerifier,
+  PhoneAuthProvider,
+  signInWithPhoneNumber,
   signInWithPopup, 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword,
@@ -12,6 +16,7 @@ import {
 } from 'firebase/auth';
 import { 
   getFirestore, 
+  Firestore,
   doc, 
   getDoc, 
   setDoc, 
@@ -24,26 +29,33 @@ import {
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
-// Initialize Firebase App
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+// Initialize Firebase App using imported configuration from firebase-applet-config.json
+export const app: FirebaseApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
-// Initialize Auth & Firestore with Database ID from config
-export const auth = getAuth(app);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+// Initialize Firebase Auth Instance
+export const auth: Auth = getAuth(app);
+
+// Initialize Firestore Database Instance
+export const db: Firestore = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+export const firestore: Firestore = db;
+
+// Auth Providers
 export const googleProvider = new GoogleAuthProvider();
 
-// Connection Test
+// Firestore Connection Test Helper
 export async function testFirestoreConnection(): Promise<boolean> {
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
     return true;
   } catch (error) {
-    // Expected error on empty doc or permission check, but server responded
     return true;
   }
 }
 
 export {
+  RecaptchaVerifier,
+  PhoneAuthProvider,
+  signInWithPhoneNumber,
   signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,

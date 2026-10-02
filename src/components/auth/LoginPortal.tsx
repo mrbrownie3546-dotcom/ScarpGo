@@ -351,10 +351,10 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
                 : selectedRole === 'staff'
                 ? 'Staff Email & Password Authentication'
                 : customerAuthMode === 'register'
-                ? 'Email OTP -> Account Details Setup'
+                ? 'Phone OTP -> Account Details Setup'
                 : customerAuthMode === 'forgotPassword'
-                ? 'Email OTP -> New Password'
-                : 'Email & Password Sign In'}
+                ? 'Phone OTP -> New Password'
+                : 'Phone Number & Password Sign In'}
             </p>
           </div>
         </div>

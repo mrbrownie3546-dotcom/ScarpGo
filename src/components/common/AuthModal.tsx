@@ -381,10 +381,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   : selectedRole === 'staff'
                   ? 'Email & Password Login'
                   : customerAuthMode === 'register'
-                  ? 'Email OTP Verification -> Account Setup'
+                  ? 'Phone OTP Verification -> Account Setup'
                   : customerAuthMode === 'forgotPassword'
-                  ? 'Email OTP -> Set New Password'
-                  : 'Email & Password Sign In'}
+                  ? 'Phone OTP -> Set New Password'
+                  : 'Phone Number & Password Sign In'}
               </p>
             </div>
           </div>
