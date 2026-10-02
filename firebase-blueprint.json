@@ -1,0 +1,67 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User account details including role and contact information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string" },
+        "full_name": { "type": "string" },
+        "phone": { "type": "string" },
+        "role": { "type": "string", "enum": ["customer", "staff", "admin"] },
+        "address": { "type": "string" },
+        "avatar_url": { "type": "string" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["id", "email", "full_name", "role"]
+    },
+    "Booking": {
+      "title": "Scrap Booking",
+      "description": "Doorstep scrap pickup booking request",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "booking_number": { "type": "string" },
+        "customer_id": { "type": "string" },
+        "customer_name": { "type": "string" },
+        "customer_phone": { "type": "string" },
+        "pickup_address": { "type": "string" },
+        "scheduled_date": { "type": "string" },
+        "scheduled_time_slot": { "type": "string" },
+        "status": { "type": "string" },
+        "pickup_otp": { "type": "string" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["id", "booking_number", "customer_name", "pickup_address", "status"]
+    },
+    "Category": {
+      "title": "Scrap Category",
+      "description": "Scrap buying category and live rate",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "icon": { "type": "string" },
+        "rate_per_kg": { "type": "number" },
+        "unit": { "type": "string" },
+        "active": { "type": "boolean" }
+      },
+      "required": ["id", "name", "rate_per_kg"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles collection"
+    },
+    "/bookings/{bookingId}": {
+      "schema": "Booking",
+      "description": "Doorstep pickup bookings"
+    },
+    "/categories/{categoryId}": {
+      "schema": "Category",
+      "description": "Scrap categories and buying rates"
+    }
+  }
+}

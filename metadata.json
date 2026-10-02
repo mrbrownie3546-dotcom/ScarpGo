@@ -1,0 +1,6 @@
+{
+  "name": "SCRAPGO - Modern Scrap Pickup & Recycling Platform",
+  "description": "All-in-one digital scrap pickup platform with Customer Portal, Staff Driver App, and Admin Command Center powered by Supabase.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
