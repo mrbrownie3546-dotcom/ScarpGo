@@ -173,24 +173,26 @@ export const ScrapGoMenuDrawer: React.FC<ScrapGoMenuDrawerProps> = ({
           </div>
 
           {/* 5. Admin Panel */}
-          <div
-            onClick={() => {
-              onClose();
-              onOpenAdminLogin();
-            }}
-            className="p-3.5 rounded-2xl bg-white border border-slate-100 flex items-center justify-between cursor-pointer hover:border-slate-300 hover:bg-slate-50 transition-all group"
-          >
-            <div className="flex items-center gap-3.5">
-              <div className="w-11 h-11 rounded-2xl bg-[#dcfce7] text-[#15803d] flex items-center justify-center">
-                <Settings className="w-5 h-5 text-[#15803d]" />
+          {activePortal !== 'admin' && (
+            <div
+              onClick={() => {
+                onClose();
+                onOpenAdminLogin();
+              }}
+              className="p-3.5 rounded-2xl bg-white border border-slate-100 flex items-center justify-between cursor-pointer hover:border-slate-300 hover:bg-slate-50 transition-all group"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="w-11 h-11 rounded-2xl bg-[#dcfce7] text-[#15803d] flex items-center justify-center">
+                  <Settings className="w-5 h-5 text-[#15803d]" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-900 text-sm">Admin Panel</h4>
+                  <p className="text-xs text-slate-500">Administrator command login</p>
+                </div>
               </div>
-              <div>
-                <h4 className="font-bold text-slate-900 text-sm">Admin Panel</h4>
-                <p className="text-xs text-slate-500">Administrator command login</p>
-              </div>
+              <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
             </div>
-            <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
-          </div>
+          )}
         </div>
 
         {/* Footer info */}

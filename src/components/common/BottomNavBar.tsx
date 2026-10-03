@@ -24,69 +24,92 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
 
-  // 1. Detect global input/textarea/select focus
+  // Helper to check if an element is a form input or editable field
+  const isInputElement = (el: Element | null): boolean => {
+    if (!el) return false;
+    const tagName = el.tagName;
+    return (
+      tagName === 'INPUT' ||
+      tagName === 'TEXTAREA' ||
+      tagName === 'SELECT' ||
+      (el as HTMLElement).isContentEditable
+    );
+  };
+
+  // 1. Detect global input/textarea/select focus & blur events
   useEffect(() => {
-    const handleFocusIn = (e: FocusEvent) => {
+    const handleFocus = (e: Event) => {
       const target = e.target as HTMLElement | null;
-      if (
-        target &&
-        (target.tagName === 'INPUT' ||
-          target.tagName === 'TEXTAREA' ||
-          target.tagName === 'SELECT' ||
-          target.isContentEditable)
-      ) {
+      if (isInputElement(target)) {
         setIsInputFocused(true);
       }
     };
 
-    const handleFocusOut = () => {
+    const handleBlur = () => {
+      // Delay check slightly to handle focus switching between inputs
       setTimeout(() => {
         const active = document.activeElement;
-        if (
-          !active ||
-          !(
-            active.tagName === 'INPUT' ||
-            active.tagName === 'TEXTAREA' ||
-            active.tagName === 'SELECT' ||
-            (active as HTMLElement).isContentEditable
-          )
-        ) {
+        if (!isInputElement(active)) {
           setIsInputFocused(false);
         }
-      }, 50);
+      }, 60);
     };
 
-    window.addEventListener('focusin', handleFocusIn);
-    window.addEventListener('focusout', handleFocusOut);
+    window.addEventListener('focusin', handleFocus);
+    window.addEventListener('focusout', handleBlur);
+    window.addEventListener('focus', handleFocus, true);
+    window.addEventListener('blur', handleBlur, true);
 
     return () => {
-      window.removeEventListener('focusin', handleFocusIn);
-      window.removeEventListener('focusout', handleFocusOut);
+      window.removeEventListener('focusin', handleFocus);
+      window.removeEventListener('focusout', handleBlur);
+      window.removeEventListener('focus', handleFocus, true);
+      window.removeEventListener('blur', handleBlur, true);
     };
   }, []);
 
-  // 2. Detect virtual keyboard and viewport height changes
+  // 2. Detect virtual mobile keyboard via window.visualViewport & window resize events
   useEffect(() => {
-    const handleViewportChange = () => {
+    const checkKeyboardVisibility = () => {
+      // Check activeElement first
+      const active = document.activeElement;
+      if (isInputElement(active)) {
+        setIsKeyboardOpen(true);
+        return;
+      }
+
       if (window.visualViewport) {
-        const heightRatio = window.visualViewport.height / window.innerHeight;
-        setIsKeyboardOpen(heightRatio < 0.85 || window.innerHeight > window.visualViewport.height + 80);
+        const viewportHeight = window.visualViewport.height;
+        const windowHeight = window.innerHeight;
+        const heightDifference = windowHeight - viewportHeight;
+        const heightRatio = viewportHeight / windowHeight;
+
+        // Virtual mobile keyboard typically reduces visualViewport height by >= 15% or 80px
+        const keyboardActive = heightRatio < 0.85 || heightDifference > 80;
+        setIsKeyboardOpen(keyboardActive);
+      } else {
+        setIsKeyboardOpen(false);
       }
     };
 
     const viewport = window.visualViewport;
     if (viewport) {
-      viewport.addEventListener('resize', handleViewportChange);
-      viewport.addEventListener('scroll', handleViewportChange);
+      viewport.addEventListener('resize', checkKeyboardVisibility);
+      viewport.addEventListener('scroll', checkKeyboardVisibility);
     }
-    window.addEventListener('resize', handleViewportChange);
+    window.addEventListener('resize', checkKeyboardVisibility);
+    window.addEventListener('orientationchange', checkKeyboardVisibility);
+
+    // Run initial check
+    checkKeyboardVisibility();
 
     return () => {
       if (viewport) {
-        viewport.removeEventListener('resize', handleViewportChange);
-        viewport.removeEventListener('scroll', handleViewportChange);
+        viewport.removeEventListener('resize', checkKeyboardVisibility);
+        viewport.removeEventListener('scroll', checkKeyboardVisibility);
       }
-      window.removeEventListener('resize', handleViewportChange);
+      window.removeEventListener('resize', checkKeyboardVisibility);
+      window.removeEventListener('orientationchange', checkKeyboardVisibility);
     };
   }, []);
 

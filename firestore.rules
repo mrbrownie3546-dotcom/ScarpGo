@@ -2,7 +2,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Global Safety Net
+    // Default Deny All
     match /{document=**} {
       allow read, write: if false;
     }
@@ -16,32 +16,64 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    // Users collection
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        getUserData().role == 'admin'
+      );
+    }
+
+    function isStaff() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        (getUserData().role == 'staff' || getUserData().role == 'admin')
+      );
+    }
+
+    // Users Collection
     match /users/{userId} {
       allow read: if isSignedIn();
-      allow create, update: if isOwner(userId) || isSignedIn();
-      allow delete: if false;
+      allow create, update: if isSignedIn() && (isOwner(userId) || isAdmin());
+      allow delete: if isAdmin();
     }
 
-    // Pickup Requests collection
-    match /pickup_requests/{requestId} {
+    // Bookings Collection
+    match /bookings/{bookingId} {
       allow read: if isSignedIn();
-      allow create, update, delete: if isSignedIn();
+      allow create: if true; // Allow customers to submit doorstep pickup requests
+      allow update: if isStaff() || isAdmin();
+      allow delete: if isAdmin();
     }
 
-    // Scrap Categories collection
-    match /scrap_categories/{categoryId} {
+    // Payouts Collection
+    match /payouts/{payoutId} {
+      allow read: if isSignedIn();
+      allow create, update: if isStaff() || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Audit Logs
+    match /audit_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn();
+      allow update, delete: if false;
+    }
+
+    // Scrap Categories (Publicly readable for customer rates)
+    match /categories/{catId} {
       allow read: if true;
-      allow write: if isSignedIn();
+      allow write: if isAdmin();
     }
 
-    // OTP Verifications collection
-    match /otp_verifications/{docId} {
-      allow read, write: if true;
+    // Service Areas (Publicly readable)
+    match /service_areas/{areaId} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
+
   }
 }

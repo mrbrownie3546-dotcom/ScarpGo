@@ -111,6 +111,7 @@ export interface Booking {
   // Payout details
   payout_method: PayoutMethod;
   upi_id?: string;
+  upi_qr_url?: string;
   bank_details?: {
     account_number: string;
     ifsc_code: string;
@@ -142,6 +143,7 @@ export interface PayoutRecord {
   amount: number;
   payout_method: PayoutMethod;
   payout_destination: string; // UPI ID or Bank account
+  upi_qr_url?: string;
   status: PayoutStatus;
   transaction_reference?: string;
   processed_by_admin?: string;

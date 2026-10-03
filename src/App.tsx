@@ -38,7 +38,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   public render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white p-6">
+        <div className="min-h-screen w-full max-w-[100vw] overflow-x-hidden flex items-center justify-center bg-slate-900 text-white p-6">
           <div className="max-w-md w-full bg-slate-800 rounded-2xl p-6 border border-slate-700 shadow-2xl space-y-4 text-center">
             <div className="w-12 h-12 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center mx-auto text-xl font-bold">
               ⚠️
@@ -71,16 +71,16 @@ const MainPortalView: React.FC = () => {
   const isAdminAuthenticated = currentUser.role === 'admin';
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-100 dark:bg-slate-950 overflow-x-hidden">
+    <div className="min-h-screen w-full max-w-[100vw] flex flex-col bg-slate-100 dark:bg-slate-950 overflow-x-hidden">
       <Header />
-      <main className="flex-1">
+      <main className="flex-1 w-full max-w-[100vw] overflow-x-hidden">
         {activePortal === 'customer' && <CustomerHome />}
 
         {activePortal === 'staff' && (
           isStaffAuthenticated ? (
             <StaffDashboard />
           ) : (
-            <div className="min-h-[75vh] flex items-center justify-center p-6">
+            <div className="min-h-[75vh] w-full max-w-[100vw] overflow-x-hidden flex items-center justify-center p-6">
               <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 shadow-2xl text-center space-y-5 animate-in fade-in zoom-in-95">
                 <div className="w-16 h-16 rounded-3xl bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto border border-amber-500/20 shadow-inner">
                   <Truck className="w-8 h-8" />
@@ -121,7 +121,7 @@ const MainPortalView: React.FC = () => {
           isAdminAuthenticated ? (
             <AdminDashboard />
           ) : (
-            <div className="min-h-[75vh] flex items-center justify-center p-6">
+            <div className="min-h-[75vh] w-full max-w-[100vw] overflow-x-hidden flex items-center justify-center p-6">
               <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 shadow-2xl text-center space-y-5 animate-in fade-in zoom-in-95">
                 <div className="w-16 h-16 rounded-3xl bg-blue-500/10 text-blue-500 flex items-center justify-center mx-auto border border-blue-500/20 shadow-inner">
                   <ShieldAlert className="w-8 h-8" />

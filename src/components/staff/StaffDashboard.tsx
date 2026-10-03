@@ -16,6 +16,7 @@ import {
   Coins,
   ChevronRight,
   AlertCircle,
+  QrCode,
 } from 'lucide-react';
 import { OtpVerificationModal } from './OtpVerificationModal';
 import { DigitalScaleCalculator } from './DigitalScaleCalculator';
@@ -252,6 +253,24 @@ export const StaffDashboard: React.FC = () => {
                       <span className="text-slate-500">Payout Mode:</span>
                       <span className="font-semibold uppercase text-emerald-700">{booking.payout_method}</span>
                     </div>
+                    {booking.upi_id && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">UPI ID:</span>
+                        <span className="font-mono font-semibold text-slate-900">{booking.upi_id}</span>
+                      </div>
+                    )}
+                    {booking.upi_qr_url && (
+                      <div className="pt-2 border-t border-slate-200 mt-2">
+                        <span className="text-xs font-bold text-emerald-800 flex items-center gap-1 mb-1">
+                          <QrCode className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Customer Payment QR Code:</span>
+                        </span>
+                        <div onClick={() => window.open(booking.upi_qr_url, '_blank')} className="cursor-pointer inline-block group">
+                          <img src={booking.upi_qr_url} alt="Scan QR" className="w-24 h-24 object-contain bg-white border-2 border-emerald-500 rounded-xl shadow-xs group-hover:scale-105 transition-transform" />
+                          <span className="text-[10px] text-emerald-700 font-bold block mt-0.5">🔍 Tap to open QR image</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 

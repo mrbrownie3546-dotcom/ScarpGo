@@ -148,6 +148,7 @@ interface ScrapContextType {
     newPassword: string
   ) => Promise<{ success: boolean; message: string }>;
   adminLogin: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
+  staffLogin: (loginIdOrEmail: string, password: string) => Promise<{ success: boolean; message: string }>;
   logoutUser: () => Promise<void>;
   switchDemoUser: (role: UserRole) => void;
 
@@ -178,6 +179,7 @@ interface ScrapContextType {
     estimated_weight_kg?: number;
     payout_method: PayoutMethod;
     upi_id?: string;
+    upi_qr_url?: string;
     bank_details?: {
       account_number: string;
       ifsc_code: string;
@@ -501,7 +503,11 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const saved = localStorage.getItem(STORAGE_KEYS.AUTH_USER);
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.full_name && parsed.full_name.includes('Dilshad')) {
+          parsed.full_name = 'Vikram Rathore';
+        }
+        return parsed;
       } catch (e) {
         /* fallback */
       }
@@ -1334,32 +1340,130 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     addNotification('Logged Out', 'You have been signed out.', 'system', 'all');
   };
 
-  const adminLogin = async (email: string, password: string) => {
-    const cleanEmail = email.trim().toLowerCase();
-    const cleanPass = password.trim();
+  const adminLogin = async (emailInput: string, passwordInput: string) => {
+    const cleanEmail = emailInput.trim().toLowerCase();
+    const cleanPass = passwordInput.trim();
 
-    // Accept berozgaarhubkl@gmail.com with Dilshad@123 OR admin@scrapgo.in / admin123
-    if (
-      (cleanEmail === 'berozgaarhubkl@gmail.com' && (cleanPass === 'Dilshad@123' || cleanPass === 'dilshad@123')) ||
-      (cleanEmail === 'admin@scrapgo.in' && (cleanPass === 'admin123' || cleanPass === 'Dilshad@123')) ||
-      (cleanEmail.includes('admin') && cleanPass.length >= 4)
-    ) {
-      const admin = INITIAL_ADMIN_USERS.find(a => a.email.toLowerCase() === cleanEmail) || INITIAL_ADMIN_USERS[0];
+    // Check Main Super Admin credentials
+    if (cleanEmail === 'scrapgo.servies@gmail.com' && cleanPass === 'Adityakumar@88') {
+      const superAdmin = adminList.find((a) => a.email.toLowerCase() === 'scrapgo.servies@gmail.com') || INITIAL_ADMIN_USERS[0];
       const profile: UserProfile = {
-        id: admin.id,
-        phone: admin.phone,
-        full_name: cleanEmail === 'berozgaarhubkl@gmail.com' ? 'Dilshad (Main Admin)' : admin.name,
-        email: cleanEmail,
+        id: superAdmin.id,
+        phone: superAdmin.phone,
+        full_name: superAdmin.name,
+        email: superAdmin.email,
         role: 'admin',
-        created_at: admin.created_at,
-        avatar_url: admin.avatar_url,
+        adminRole: 'SUPER_ADMIN',
+        created_at: superAdmin.created_at,
+        avatar_url: superAdmin.avatar_url,
       };
       setActivePortal('admin');
+      setCurrentAdmin(superAdmin);
       setCurrentUser(profile);
       localStorage.setItem(STORAGE_KEYS.AUTH_USER, JSON.stringify(profile));
-      return { success: true, message: 'Admin login successful' };
+
+      logAuditEvent({
+        action_id: `ACT-${Date.now()}`,
+        actor_id: superAdmin.id,
+        actor_name: superAdmin.name,
+        actor_role: 'SUPER_ADMIN',
+        action: 'Main Super Admin Authenticated',
+        module: 'auth',
+        reason: 'Super Admin Firebase Credentials Authentication Successful',
+        result: 'success',
+      });
+
+      return { success: true, message: 'Super Admin login successful' };
     }
-    return { success: false, message: 'Galat Email ya Password! Sahi Admin Email (berozgaarhubkl@gmail.com) aur Password (Dilshad@123) bharein.' };
+
+    // Check registered admin accounts
+    const matchAdmin = adminList.find((a) => a.email.toLowerCase() === cleanEmail);
+    if (matchAdmin) {
+      if (matchAdmin.status === 'inactive' || matchAdmin.is_active === false) {
+        return { success: false, message: 'Account is deactivated. Contact Super Admin.' };
+      }
+
+      const profile: UserProfile = {
+        id: matchAdmin.id,
+        phone: matchAdmin.phone,
+        full_name: matchAdmin.name,
+        email: matchAdmin.email,
+        role: 'admin',
+        adminRole: matchAdmin.adminRole,
+        created_at: matchAdmin.created_at,
+        avatar_url: matchAdmin.avatar_url,
+      };
+
+      // Update last login
+      setAdminList((prev) =>
+        prev.map((a) => (a.id === matchAdmin.id ? { ...a, last_login: new Date().toISOString() } : a))
+      );
+
+      setActivePortal('admin');
+      setCurrentAdmin(matchAdmin);
+      setCurrentUser(profile);
+      localStorage.setItem(STORAGE_KEYS.AUTH_USER, JSON.stringify(profile));
+
+      return { success: true, message: `Admin login successful (${matchAdmin.name})` };
+    }
+
+    return {
+      success: false,
+      message: 'Invalid Admin Email or Password. Sahi Super Admin Email (scrapgo.servies@gmail.com) aur Password (Adityakumar@88) bharein.',
+    };
+  };
+
+  const staffLogin = async (loginIdInput: string, passwordInput: string) => {
+    const cleanInput = loginIdInput.trim().toLowerCase();
+    const cleanPass = passwordInput.trim();
+
+    // Match Initial Staff Account (Staffuser1 / Staff@88) or registered staff by email or name/id
+    const matchStaff = staffMembers.find(
+      (s) =>
+        s.email.toLowerCase() === cleanInput ||
+        s.name.toLowerCase().replace(/\s+/g, '') === cleanInput ||
+        cleanInput === 'staffuser1'
+    );
+
+    if (
+      (cleanInput === 'staffuser1' && (cleanPass === 'Staff@88' || cleanPass === 'staff123')) ||
+      (matchStaff && (cleanPass === 'Staff@88' || cleanPass === 'staff123' || cleanPass.length >= 4))
+    ) {
+      const staffObj = matchStaff || staffMembers[0];
+
+      if (staffObj && (staffObj.status === 'inactive' || staffObj.is_active === false)) {
+        return { success: false, message: 'Account is deactivated. Contact Super Admin.' };
+      }
+
+      const staffProfile: UserProfile = {
+        id: staffObj ? staffObj.id : 'stf-001',
+        phone: staffObj ? staffObj.phone : '+91 98111 20001',
+        full_name: staffObj ? staffObj.name : 'Staff Member 1',
+        email: staffObj ? staffObj.email : 'staffuser1@scrapgo.in',
+        role: 'staff',
+        created_at: new Date().toISOString(),
+        avatar_url:
+          staffObj?.avatar_url ||
+          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+        vehicle_number: staffObj?.vehicle_number || 'HR 10 AB 4921 (Mahindra Bolero)',
+      };
+
+      // Update staff last active
+      setStaffMembers((prev) =>
+        prev.map((s) => (s.id === staffProfile.id ? { ...s, last_active: new Date().toISOString() } : s))
+      );
+
+      setActivePortal('staff');
+      setCurrentUser(staffProfile);
+      localStorage.setItem(STORAGE_KEYS.AUTH_USER, JSON.stringify(staffProfile));
+
+      return { success: true, message: `Staff login successful (${staffProfile.full_name})` };
+    }
+
+    return {
+      success: false,
+      message: 'Invalid Staff Login ID or Password. Sahi Staff ID (Staffuser1) aur Password (Staff@88) bharein.',
+    };
   };
 
   const switchDemoUser = (role: UserRole) => {
@@ -1510,6 +1614,7 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     estimated_weight_kg?: number;
     payout_method: PayoutMethod;
     upi_id?: string;
+    upi_qr_url?: string;
     bank_details?: {
       account_number: string;
       ifsc_code: string;
@@ -1543,6 +1648,7 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       otp_verified: false,
       payout_method: bookingData.payout_method,
       upi_id: bookingData.upi_id,
+      upi_qr_url: bookingData.upi_qr_url,
       bank_details: bookingData.bank_details,
       payout_status: 'pending_approval',
       created_at: new Date().toISOString(),

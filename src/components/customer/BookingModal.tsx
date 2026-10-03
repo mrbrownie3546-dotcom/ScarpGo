@@ -18,6 +18,8 @@ import {
   Banknote,
   QrCode,
   Share2,
+  Upload,
+  Image as ImageIcon,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -36,17 +38,17 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onClose, preselected
 
   const [step, setStep] = useState<1 | 2>(1);
 
-  // Form states
+  // Form states - Start empty so customer fills them manually
   const [selectedCatIds, setSelectedCatIds] = useState<string[]>(
-    preselectedCategoryId ? [preselectedCategoryId] : ['cat-iron', 'cat-cardboard']
+    preselectedCategoryId ? [preselectedCategoryId] : [categories[0]?.id || 'cat-iron']
   );
-  const [expectedItems, setExpectedItems] = useState('Old cartons, newspaper bundles, iron grills');
-  const [estimatedWeight, setEstimatedWeight] = useState<number>(30);
+  const [expectedItems, setExpectedItems] = useState('');
+  const [estimatedWeight, setEstimatedWeight] = useState<number>(20);
 
-  const [name, setName] = useState(currentUser.full_name || 'Aman Verma');
-  const [phone, setPhone] = useState(currentUser.phone || '+91 98287 21470');
-  const [address, setAddress] = useState('Plot #89, Model Town, Sonipat, Haryana');
-  const [landmark, setLandmark] = useState('Near Civil Hospital');
+  const [name, setName] = useState(currentUser?.role === 'customer' ? (currentUser.full_name || '') : '');
+  const [phone, setPhone] = useState(currentUser?.role === 'customer' ? (currentUser.phone || '') : '');
+  const [address, setAddress] = useState('');
+  const [landmark, setLandmark] = useState('');
 
   // Tomorrow as default pickup date
   const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
@@ -55,22 +57,18 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onClose, preselected
 
   // Payout method
   const [payoutMethod, setPayoutMethod] = useState<PayoutMethod>('upi');
-  const [upiId, setUpiId] = useState('aman.verma@okhdfcbank');
-  const [accountNumber, setAccountNumber] = useState('50100492817291');
-  const [ifscCode, setIfscCode] = useState('HDFC0001042');
-  const [accountHolder, setAccountHolder] = useState('Aman Verma');
+  const [upiId, setUpiId] = useState('');
+  const [upiQrUrl, setUpiQrUrl] = useState('');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [ifscCode, setIfscCode] = useState('');
+  const [accountHolder, setAccountHolder] = useState('');
 
   // Completed booking result
   const [createdBooking, setCreatedBooking] = useState<any | null>(null);
 
+  // Single select for scrap category
   const toggleCategory = (id: string) => {
-    if (selectedCatIds.includes(id)) {
-      if (selectedCatIds.length > 1) {
-        setSelectedCatIds(selectedCatIds.filter((c) => c !== id));
-      }
-    } else {
-      setSelectedCatIds([...selectedCatIds, id]);
-    }
+    setSelectedCatIds([id]);
   };
 
   const handleUseCurrentLocation = () => {
@@ -110,6 +108,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onClose, preselected
       estimated_weight_kg: estimatedWeight,
       payout_method: payoutMethod,
       upi_id: payoutMethod === 'upi' ? upiId : undefined,
+      upi_qr_url: payoutMethod === 'upi' ? upiQrUrl : undefined,
       bank_details:
         payoutMethod === 'bank_transfer'
           ? {
@@ -484,18 +483,80 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onClose, preselected
                 </div>
 
                 {payoutMethod === 'upi' && (
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                      {t('upi_id_label', 'Your UPI ID (VPA):')}
-                    </label>
-                    <input
-                      type="text"
-                      value={upiId}
-                      onChange={(e) => setUpiId(e.target.value)}
-                      placeholder="e.g. mobile@upi or name@okhdfcbank"
-                      required
-                      className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    />
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                        {t('upi_id_label', 'Your UPI ID (VPA):')}
+                      </label>
+                      <input
+                        type="text"
+                        value={upiId}
+                        onChange={(e) => setUpiId(e.target.value)}
+                        placeholder="e.g. mobile@upi or name@okhdfcbank"
+                        required={!upiQrUrl}
+                        className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+
+                    {/* QR Code / Screenshot Attachment Option */}
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1 flex items-center justify-between">
+                        <span>{t('attach_qr_label', 'Attach Payment QR Code / Screenshot:')}</span>
+                        <span className="text-[10px] text-emerald-600 font-bold">PhonePe / GPay / Paytm QR</span>
+                      </label>
+
+                      {upiQrUrl ? (
+                        <div className="relative border border-emerald-300 bg-emerald-50/70 rounded-xl p-2.5 flex items-center gap-3 shadow-xs">
+                          <div className="w-14 h-14 rounded-lg bg-white border border-slate-200 overflow-hidden shrink-0 shadow-xs">
+                            <img src={upiQrUrl} alt="Attached QR Code" className="w-full h-full object-cover" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-emerald-900 truncate flex items-center gap-1">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                              <span>QR Code Screenshot Attached</span>
+                            </p>
+                            <p className="text-[10px] text-slate-500 mt-0.5">Visible to Admin & Driver for Instant Payout scan</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setUpiQrUrl('')}
+                            className="p-1.5 rounded-lg bg-rose-100 text-rose-700 hover:bg-rose-200 text-xs font-bold transition-colors cursor-pointer shrink-0"
+                            title="Remove attached QR"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="border-2 border-dashed border-slate-300 hover:border-emerald-500 rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer transition-colors bg-slate-50 hover:bg-emerald-50/40 group">
+                          <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-1 group-hover:scale-110 transition-transform">
+                            <QrCode className="w-4 h-4" />
+                          </div>
+                          <span className="text-xs font-bold text-slate-700 group-hover:text-emerald-800">
+                            📷 Upload QR Code Screenshot
+                          </span>
+                          <span className="text-[10px] text-slate-400 mt-0.5">
+                            Click to attach image file from gallery
+                          </span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onload = (evt) => {
+                                  if (evt.target?.result) {
+                                    setUpiQrUrl(evt.target.result as string);
+                                  }
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                          />
+                        </label>
+                      )}
+                    </div>
                   </div>
                 )}
 
