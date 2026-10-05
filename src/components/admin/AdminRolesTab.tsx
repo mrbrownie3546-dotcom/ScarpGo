@@ -47,8 +47,8 @@ export const AdminRolesTab: React.FC = () => {
     canPerform,
   } = useScrap();
 
-  // View mode: 'tree' | 'admins' | 'staff'
-  const [viewMode, setViewMode] = useState<'tree' | 'admins' | 'staff'>('tree');
+  // View mode: 'admins' | 'staff' | 'tree'
+  const [viewMode, setViewMode] = useState<'admins' | 'staff' | 'tree'>('admins');
 
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -190,99 +190,45 @@ export const AdminRolesTab: React.FC = () => {
 
   return (
     <div className="space-y-5">
-      {/* SECTION 1: HEADER WITH 3-LEVEL ROLE HIERARCHY BANNER */}
-      <div className="bg-slate-900 text-white rounded-3xl p-5 sm:p-6 border border-slate-800 shadow-xl space-y-4">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <span className="w-9 h-9 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30">
-                <ShieldAlert className="w-5 h-5" />
-              </span>
-              <h2 className="text-xl font-black tracking-tight">
-                Admin, Sub-Admin & Staff Governance System
-              </h2>
-              <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-amber-500 text-slate-950 font-mono">
-                Flexible RBAC System
-              </span>
-            </div>
-            <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
-              Main Admin exercises supreme governance. Admins operate with delegated permissions and can supervise
-              field staff. Staff handle operational doorstep collection. Securely enforced via Firebase & backend rules.
-            </p>
+      {/* SECTION 1: CLEAN HEADER WITH ACTION BUTTONS */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 flex items-center justify-center border border-amber-200 dark:border-amber-900 shrink-0">
+            <UserCheck className="w-5 h-5" />
           </div>
-
-          {/* Action Buttons */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {canCreateAdmin && (
-              <button
-                type="button"
-                onClick={() => setCreateAdminModalOpen(true)}
-                className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shadow-md transition-all flex items-center gap-1.5"
-              >
-                <UserPlus className="w-4 h-4" />
-                <span>Create New Admin</span>
-              </button>
-            )}
-
-            {canCreateStaff && (
-              <button
-                type="button"
-                onClick={() => setCreateStaffModalOpen(true)}
-                className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs shadow-md transition-all flex items-center gap-1.5"
-              >
-                <Truck className="w-4 h-4" />
-                <span>Create New Staff</span>
-              </button>
-            )}
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white">Admin & Staff Directory</h2>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Manage administrator accounts, field staff members, and system access permissions.
+            </p>
           </div>
         </div>
 
-        {/* 3-Level Visual Hierarchy Badges */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs">
-          <div className="bg-slate-800/80 border border-amber-500/40 p-3.5 rounded-2xl space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-amber-400 font-bold text-xs flex items-center gap-1.5">
-                <Award className="w-4 h-4" />
-                <span>LEVEL 1: MAIN ADMIN</span>
-              </span>
-              <span className="text-[10px] bg-amber-500/20 text-amber-300 font-mono px-2 py-0.2 rounded-full">
-                {adminList.filter((a) => a.role_level === 'MAIN_ADMIN').length} Active
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-300 leading-tight">
-              Supreme authority: Creates Admins, sets custom titles, grants/revokes permissions, reassigns staff, and audits.
-            </p>
-          </div>
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {canCreateAdmin && (
+            <button
+              type="button"
+              onClick={() => setCreateAdminModalOpen(true)}
+              className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <UserPlus className="w-4 h-4" />
+              <span>Create New Admin</span>
+            </button>
+          )}
 
-          <div className="bg-slate-800/80 border border-blue-500/40 p-3.5 rounded-2xl space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-blue-400 font-bold text-xs flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4" />
-                <span>LEVEL 2: ADMIN</span>
-              </span>
-              <span className="text-[10px] bg-blue-500/20 text-blue-300 font-mono px-2 py-0.2 rounded-full">
-                {adminList.filter((a) => a.role_level === 'ADMIN').length} Active
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-300 leading-tight">
-              Operational managers with custom titles. Can create and direct field Staff if empowered with Can Create Staff.
-            </p>
-          </div>
-
-          <div className="bg-slate-800/80 border border-emerald-500/40 p-3.5 rounded-2xl space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-emerald-400 font-bold text-xs flex items-center gap-1.5">
-                <Truck className="w-4 h-4" />
-                <span>LEVEL 3: STAFF</span>
-              </span>
-              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-mono px-2 py-0.2 rounded-full">
-                {staffMembers.length} Members
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-300 leading-tight">
-              Field drivers & verification staff. Operates only under supervising Admin. Cannot create accounts.
-            </p>
-          </div>
+          {canCreateStaff && (
+            <button
+              type="button"
+              onClick={() => setCreateStaffModalOpen(true)}
+              className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <Truck className="w-4 h-4" />
+              <span>Create New Staff</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -303,36 +249,36 @@ export const AdminRolesTab: React.FC = () => {
       )}
 
       {/* TOOLBAR: VIEW TOGGLES & SEARCH & FILTERS */}
-      <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs space-y-3">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           {/* View Mode Toggle */}
-          <div className="flex items-center bg-slate-100 p-1 rounded-xl text-xs font-bold text-slate-600 shrink-0">
-            <button
-              onClick={() => setViewMode('tree')}
-              className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
-                viewMode === 'tree' ? 'bg-white text-slate-900 shadow-xs' : 'hover:text-slate-900'
-              }`}
-            >
-              <Layers className="w-3.5 h-3.5 text-amber-600" />
-              <span>🏢 Hierarchy Tree</span>
-            </button>
+          <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs font-bold text-slate-600 shrink-0">
             <button
               onClick={() => setViewMode('admins')}
-              className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
-                viewMode === 'admins' ? 'bg-white text-slate-900 shadow-xs' : 'hover:text-slate-900'
+              className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                viewMode === 'admins' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs' : 'hover:text-slate-900'
               }`}
             >
               <Users className="w-3.5 h-3.5 text-blue-600" />
-              <span>👥 Admins Ledger ({adminList.length})</span>
+              <span>Admins ({adminList.length})</span>
             </button>
             <button
               onClick={() => setViewMode('staff')}
-              className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
-                viewMode === 'staff' ? 'bg-white text-slate-900 shadow-xs' : 'hover:text-slate-900'
+              className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                viewMode === 'staff' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs' : 'hover:text-slate-900'
               }`}
             >
               <Truck className="w-3.5 h-3.5 text-emerald-600" />
-              <span>🚚 Staff Fleet ({staffMembers.length})</span>
+              <span>Staff ({staffMembers.length})</span>
+            </button>
+            <button
+              onClick={() => setViewMode('tree')}
+              className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                viewMode === 'tree' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs' : 'hover:text-slate-900'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5 text-amber-600" />
+              <span>Hierarchy View</span>
             </button>
           </div>
 
@@ -378,7 +324,7 @@ export const AdminRolesTab: React.FC = () => {
                 .filter((a) => a.can_create_staff || a.role_level === 'MAIN_ADMIN')
                 .map((a) => (
                   <option key={a.id} value={a.id}>
-                    Staff under {a.name} ({a.custom_title})
+                    Staff under {a.name} {a.custom_title && a.custom_title !== a.name ? `(${a.custom_title})` : ''}
                   </option>
                 ))}
             </select>
@@ -402,36 +348,6 @@ export const AdminRolesTab: React.FC = () => {
       {/* VIEW 1: ORGANIZATIONAL HIERARCHY TREE */}
       {viewMode === 'tree' && (
         <div className="space-y-4">
-          <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs flex items-center justify-between">
-            <div>
-              <h3 className="font-bold text-slate-900 text-sm">
-                ScrapGo Administrative Chain of Command
-              </h3>
-              <p className="text-xs text-slate-500">
-                Click any administrator card to expand or collapse subordinate staff reporting to them.
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  const allExpanded: Record<string, boolean> = {};
-                  adminList.forEach((a) => (allExpanded[a.id] = true));
-                  setExpandedAdmins(allExpanded);
-                }}
-                className="text-xs text-blue-600 hover:text-blue-800 font-bold"
-              >
-                Expand All
-              </button>
-              <span className="text-slate-300">•</span>
-              <button
-                onClick={() => setExpandedAdmins({})}
-                className="text-xs text-slate-500 hover:text-slate-700 font-bold"
-              >
-                Collapse All
-              </button>
-            </div>
-          </div>
-
           {/* Tree hierarchy cards */}
           <div className="space-y-4">
             {filteredAdmins.map((admin) => {
@@ -453,15 +369,10 @@ export const AdminRolesTab: React.FC = () => {
                   {/* Admin Row Card */}
                   <div className="p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-white via-white to-slate-50/50">
                     <div className="flex items-start sm:items-center gap-3.5">
-                      <div className="relative shrink-0">
-                        <div className="w-12 h-12 rounded-2xl overflow-hidden border border-slate-200 shadow-2xs">
-                          <img src={admin.avatar_url} alt="" className="w-full h-full object-cover" />
+                      <div className="shrink-0">
+                        <div className="w-11 h-11 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300 border border-amber-200 dark:border-amber-800 shadow-2xs flex items-center justify-center font-black text-base">
+                          {admin.name.charAt(0)}
                         </div>
-                        <span
-                          className={`w-3.5 h-3.5 rounded-full absolute -bottom-1 -right-1 border-2 border-white ${
-                            admin.is_active ? 'bg-emerald-500' : 'bg-rose-500'
-                          }`}
-                        ></span>
                       </div>
 
                       <div className="space-y-1">
@@ -493,9 +404,11 @@ export const AdminRolesTab: React.FC = () => {
                         </div>
 
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-bold text-xs text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-md border border-amber-200">
-                            {admin.custom_title}
-                          </span>
+                          {admin.custom_title && admin.custom_title !== admin.name && (
+                            <span className="font-bold text-xs text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-md border border-amber-200">
+                              {admin.custom_title}
+                            </span>
+                          )}
                           <span className="text-[11px] text-slate-400 font-mono">
                             {admin.email} • {admin.phone}
                           </span>
@@ -601,8 +514,8 @@ export const AdminRolesTab: React.FC = () => {
                           >
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-full overflow-hidden border border-slate-200 shrink-0">
-                                  <img src={staff.avatar_url} alt="" className="w-full h-full object-cover" />
+                                <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-900 border border-blue-200 shrink-0 flex items-center justify-center font-extrabold text-xs">
+                                  {staff.name.charAt(0)}
                                 </div>
                                 <div>
                                   <strong className="text-slate-900 block text-xs">{staff.name}</strong>
@@ -676,12 +589,12 @@ export const AdminRolesTab: React.FC = () => {
       {/* VIEW 2: ADMINISTRATORS LEDGER */}
       {viewMode === 'admins' && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-          <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+          <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
             <h3 className="font-bold text-slate-900 text-sm">
               All Configured Administrators ({filteredAdmins.length})
             </h3>
-            <span className="text-xs text-slate-500">
-              Granular permissions strictly enforced on Firestore Security Rules
+            <span className="text-[11px] text-slate-400 font-medium">
+              Granular access permissions enforced
             </span>
           </div>
 
@@ -711,8 +624,8 @@ export const AdminRolesTab: React.FC = () => {
                       {/* Profile */}
                       <td className="p-3.5">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-9 h-9 rounded-full overflow-hidden border border-slate-200 shrink-0">
-                            <img src={admin.avatar_url} alt="" className="w-full h-full object-cover" />
+                          <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-900 border border-amber-200 shrink-0 flex items-center justify-center font-extrabold text-xs">
+                            {admin.name.charAt(0)}
                           </div>
                           <div>
                             <div className="flex items-center gap-1.5">
@@ -881,8 +794,8 @@ export const AdminRolesTab: React.FC = () => {
                     {/* Staff Profile */}
                     <td className="p-3.5">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-full overflow-hidden border border-slate-200 shrink-0">
-                          <img src={staff.avatar_url} alt="" className="w-full h-full object-cover" />
+                        <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-900 border border-blue-200 shrink-0 flex items-center justify-center font-extrabold text-xs">
+                          {staff.name.charAt(0)}
                         </div>
                         <div>
                           <strong className="text-slate-900 block">{staff.name}</strong>
@@ -993,8 +906,8 @@ export const AdminRolesTab: React.FC = () => {
           <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-6 border border-slate-200 animate-in fade-in zoom-in-95 space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl overflow-hidden border border-slate-200">
-                  <img src={inspectUser.avatar_url} alt="" className="w-full h-full object-cover" />
+                <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-900 border border-amber-200 shrink-0 flex items-center justify-center font-black text-sm">
+                  {inspectUser.name.charAt(0)}
                 </div>
                 <div>
                   <h3 className="font-black text-slate-900 text-sm">{inspectUser.name}</h3>

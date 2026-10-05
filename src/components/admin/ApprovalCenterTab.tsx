@@ -75,39 +75,37 @@ export const ApprovalCenterTab: React.FC = () => {
   return (
     <div className="space-y-5">
       {/* Top Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl p-5 border border-indigo-900/50 shadow-xl">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center border border-indigo-500/30">
-                <ShieldAlert className="w-4 h-4" />
-              </span>
-              <h2 className="text-lg font-black tracking-tight">Dual-Admin Approval Center</h2>
-              <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-indigo-500 text-white">
-                Level 3 Governance
-              </span>
-            </div>
-            <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
-              High-risk financial disbursements, scrap rate adjustments, and role elevations require
-              a <strong>Second Admin review</strong>. The admin who submitted the request cannot authorize their own change.
-            </p>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-400 flex items-center justify-center border border-indigo-200 dark:border-indigo-900">
+              <ShieldAlert className="w-4 h-4" />
+            </span>
+            <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">Dual-Admin Approval Center</h2>
+            <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300">
+              Level 3 Governance
+            </span>
           </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed">
+            High-risk financial disbursements, scrap rate adjustments, and role elevations require
+            a <strong className="text-slate-700 dark:text-slate-200">Second Admin review</strong>. The admin who submitted the request cannot authorize their own change.
+          </p>
+        </div>
 
-          <div className="flex items-center gap-3">
-            <div className="bg-slate-800/80 border border-slate-700 p-3 rounded-xl text-center min-w-[110px]">
-              <span className="text-[10px] uppercase font-bold text-amber-400 block">Pending Reviews</span>
-              <span className="text-2xl font-black text-amber-400">{pendingCount}</span>
-            </div>
-            <div className="bg-slate-800/80 border border-slate-700 p-3 rounded-xl text-center min-w-[120px]">
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">Dual Approval</span>
-              <span className={`text-xs font-bold px-2 py-0.5 rounded-full inline-block mt-1 ${
-                systemSettings.require_dual_approval_for_high_risk
-                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                  : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-              }`}>
-                {systemSettings.require_dual_approval_for_high_risk ? 'ENFORCED' : 'OPTIONAL'}
-              </span>
-            </div>
+        <div className="flex items-center gap-3">
+          <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 rounded-xl text-center min-w-[110px]">
+            <span className="text-[10px] uppercase font-bold text-amber-600 dark:text-amber-400 block">Pending Reviews</span>
+            <span className="text-xl font-black text-amber-700 dark:text-amber-300">{pendingCount}</span>
+          </div>
+          <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 rounded-xl text-center min-w-[120px]">
+            <span className="text-[10px] uppercase font-bold text-slate-400 block">Dual Approval</span>
+            <span className={`text-xs font-bold px-2 py-0.5 rounded-full inline-block mt-1 ${
+              systemSettings.require_dual_approval_for_high_risk
+                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
+                : 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300 border border-amber-300 dark:border-amber-800'
+            }`}>
+              {systemSettings.require_dual_approval_for_high_risk ? 'ENFORCED' : 'OPTIONAL'}
+            </span>
           </div>
         </div>
       </div>

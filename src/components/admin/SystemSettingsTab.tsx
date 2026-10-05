@@ -95,32 +95,31 @@ export const SystemSettingsTab: React.FC = () => {
   return (
     <div className="space-y-5">
       {/* Header Banner */}
-      <div className="bg-slate-900 text-white rounded-2xl p-5 border border-slate-800 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center border border-indigo-500/30">
-              <Settings className="w-4 h-4" />
-            </span>
-            <h2 className="text-lg font-black tracking-tight">System Settings & Governance Policies</h2>
-            <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-indigo-600 text-white">
-              Main Admin Control
-            </span>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-200 shrink-0 flex items-center justify-center font-bold">
+            <Settings className="w-5 h-5" />
           </div>
-          <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
-            Configure system-wide operational policies, dual-admin approval triggers, maintenance downtime, and WhatsApp business credentials.
-          </p>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white">System & Governance Settings</h2>
+              <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 border border-indigo-200">
+                Main Admin
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Configure app operational policies, high-risk approval triggers, and official contact details.
+            </p>
+          </div>
         </div>
 
-        <div className="bg-slate-800/80 border border-slate-700 p-3 rounded-xl text-xs space-y-1">
-          <div className="flex items-center justify-between gap-4 text-slate-400">
-            <span>Settings Access:</span>
-            <strong className={canManageSettings ? 'text-emerald-400' : 'text-rose-400'}>
-              {canManageSettings ? 'AUTHORIZED' : 'RESTRICTED'}
-            </strong>
-          </div>
-          <div className="text-[10px] text-slate-400">
-            Active: <strong>{currentAdmin.name}</strong> ({currentAdmin.adminRole})
-          </div>
+        <div className="flex items-center gap-2 text-xs self-start sm:self-auto shrink-0">
+          <span className="text-slate-500 font-medium">Access Status:</span>
+          <span className={`font-extrabold px-2.5 py-1 rounded-xl text-[11px] ${
+            canManageSettings ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
+          }`}>
+            {canManageSettings ? 'AUTHORIZED' : 'RESTRICTED'}
+          </span>
         </div>
       </div>
 
@@ -142,50 +141,46 @@ export const SystemSettingsTab: React.FC = () => {
       {/* Critical Policy Toggles Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Policy 1: Dual Approval for High-Risk Actions */}
-        <div className="bg-white rounded-2xl p-5 border border-indigo-200 shadow-xs flex flex-col justify-between space-y-4">
+        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex flex-col justify-between space-y-4">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 border border-indigo-200">
-                Governance Safeguard
+              <span className="text-xs font-extrabold text-slate-900 flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-indigo-600" />
+                <span>Dual-Admin Approval Rule</span>
               </span>
               <span
-                className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase ${
                   systemSettings.require_dual_approval_for_high_risk
-                    ? 'bg-emerald-100 text-emerald-800'
-                    : 'bg-slate-100 text-slate-500'
+                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                    : 'bg-slate-100 text-slate-500 border border-slate-200'
                 }`}
               >
-                {systemSettings.require_dual_approval_for_high_risk ? 'ACTIVE' : 'DISABLED'}
+                {systemSettings.require_dual_approval_for_high_risk ? 'ENFORCED' : 'DISABLED'}
               </span>
             </div>
 
-            <h3 className="font-bold text-slate-900 text-sm">
-              Require Second Admin Approval for High-Risk Actions
-            </h3>
             <p className="text-xs text-slate-600 leading-relaxed">
-              When enabled, high-risk changes (large payout adjustments, rate alterations, and role changes)
-              are not executed immediately. Instead, they enter a <strong>PENDING APPROVAL</strong> state
-              in the Approval Center requiring verification by another Main Admin. Self-approval is strictly prohibited.
+              When enabled, high-risk financial payouts (≥ ₹{systemSettings.min_payout_amount_requiring_dual_approval}) and rate modifications require secondary Main Admin approval in the Approval Center before execution.
             </p>
           </div>
 
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-            <span className="text-[11px] text-slate-500">
-              Trigger threshold: Payouts <strong>≥ ₹{systemSettings.min_payout_amount_requiring_dual_approval}</strong>
+          <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+            <span className="text-[11px] text-slate-500 font-mono">
+              Threshold: ₹{systemSettings.min_payout_amount_requiring_dual_approval}+
             </span>
             <button
               type="button"
               disabled={!canManageSettings}
               onClick={() => setDualApprovalModalOpen(true)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-xs ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all shadow-xs cursor-pointer ${
                 !canManageSettings
                   ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400'
                   : systemSettings.require_dual_approval_for_high_risk
-                  ? 'bg-slate-800 hover:bg-slate-900 text-white'
+                  ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300'
                   : 'bg-indigo-600 hover:bg-indigo-700 text-white'
               }`}
             >
-              {systemSettings.require_dual_approval_for_high_risk ? 'Disable Dual Approval' : 'Enable Dual Approval'}
+              {systemSettings.require_dual_approval_for_high_risk ? 'Disable Safeguard' : 'Enable Safeguard'}
             </button>
           </div>
         </div>
@@ -194,36 +189,35 @@ export const SystemSettingsTab: React.FC = () => {
         <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex flex-col justify-between space-y-4">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
-                System Availability
+              <span className="text-xs font-extrabold text-slate-900 flex items-center gap-1.5">
+                <Power className="w-4 h-4 text-amber-600" />
+                <span>System Maintenance Downtime</span>
               </span>
               <span
-                className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase ${
                   systemSettings.maintenance_mode
                     ? 'bg-rose-100 text-rose-800 border border-rose-300'
-                    : 'bg-emerald-100 text-emerald-800'
+                    : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
                 }`}
               >
-                {systemSettings.maintenance_mode ? 'MAINTENANCE ON' : 'SYSTEM LIVE'}
+                {systemSettings.maintenance_mode ? 'DOWNTIME ACTIVE' : 'SYSTEM LIVE'}
               </span>
             </div>
 
-            <h3 className="font-bold text-slate-900 text-sm">System Maintenance Mode</h3>
             <p className="text-xs text-slate-600 leading-relaxed">
-              Temporarily pause customer pickup bookings and notify app visitors that server optimization
-              or physical warehouse inventory audits are in progress.
+              Temporarily pause customer pickup bookings and notify app visitors that server optimization or physical warehouse audits are in progress.
             </p>
           </div>
 
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-            <span className="text-[11px] text-slate-500">
-              State: <strong>{systemSettings.maintenance_mode ? 'Downtime Active' : 'Normal Operations'}</strong>
+          <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+            <span className="text-[11px] text-slate-500 font-mono">
+              Status: {systemSettings.maintenance_mode ? 'Offline' : 'Online'}
             </span>
             <button
               type="button"
               disabled={!canManageSettings}
               onClick={() => setMaintenanceModalOpen(true)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-xs ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all shadow-xs cursor-pointer ${
                 !canManageSettings
                   ? 'opacity-40 cursor-not-allowed bg-slate-100 text-slate-400'
                   : systemSettings.maintenance_mode

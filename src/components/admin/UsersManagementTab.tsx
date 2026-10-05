@@ -63,34 +63,66 @@ export const UsersManagementTab: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      {/* Header Banner */}
-      <div className="bg-slate-900 text-white rounded-2xl p-5 border border-slate-800 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center border border-blue-500/30">
-              <Users className="w-4 h-4" />
-            </span>
-            <h2 className="text-lg font-black tracking-tight">Customer & Staff Account Management</h2>
-            <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-blue-600 text-white">
-              Data Privacy Compliant
-            </span>
+      {/* Clean Modern Header & Quick Stats */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3.5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400 flex items-center justify-center border border-emerald-200 dark:border-emerald-900 shrink-0">
+              <Users className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-extrabold text-slate-900 dark:text-white">User Accounts Directory</h2>
+                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300">
+                  Live Management
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Manage registered customer profiles, driver accounts, and account access permissions.
+              </p>
+            </div>
           </div>
-          <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
-            Main Admin can inspect account registration status and block or unblock misbehaving profiles.
-            Sub-admins operate with restricted visibility.
-          </p>
         </div>
 
-        {/* Zero-Secrets Compliance Notice */}
-        <div className="bg-slate-800/80 border border-slate-700/80 p-3 rounded-xl text-xs max-w-xs space-y-1">
-          <div className="flex items-center gap-1.5 text-amber-400 font-bold text-[11px]">
-            <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
-            <span>Strict Zero-Secrets Policy:</span>
+        {/* Quick Stat Badges */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+          <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 flex items-center justify-between">
+            <div>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold block">Total Accounts</span>
+              <span className="text-base font-black text-slate-900 dark:text-white">{allUsers.length}</span>
+            </div>
+            <Users className="w-4 h-4 text-slate-400" />
           </div>
-          <p className="text-[10px] text-slate-300 leading-snug">
-            User passwords, plaintext OTPs, UPI PINs, ATM debit PINs, and banking credentials are never visible
-            or stored in administrative portals.
-          </p>
+
+          <div className="p-3 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-900/50 flex items-center justify-between">
+            <div>
+              <span className="text-[10px] text-emerald-700 dark:text-emerald-400 uppercase font-bold block">Active Customers</span>
+              <span className="text-base font-black text-emerald-800 dark:text-emerald-300">
+                {allUsers.filter((u) => (u.role === 'customer' || !u.role) && !u.is_blocked).length}
+              </span>
+            </div>
+            <User className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+          </div>
+
+          <div className="p-3 rounded-xl bg-amber-50/60 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-900/50 flex items-center justify-between">
+            <div>
+              <span className="text-[10px] text-amber-700 dark:text-amber-400 uppercase font-bold block">Staff & Drivers</span>
+              <span className="text-base font-black text-amber-800 dark:text-amber-300">
+                {allUsers.filter((u) => u.role === 'staff').length}
+              </span>
+            </div>
+            <Truck className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+          </div>
+
+          <div className="p-3 rounded-xl bg-rose-50/60 dark:bg-rose-950/30 border border-rose-200/60 dark:border-rose-900/50 flex items-center justify-between">
+            <div>
+              <span className="text-[10px] text-rose-700 dark:text-rose-400 uppercase font-bold block">Blocked Accounts</span>
+              <span className="text-base font-black text-rose-800 dark:text-rose-300">
+                {allUsers.filter((u) => u.is_blocked).length}
+              </span>
+            </div>
+            <ShieldAlert className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+          </div>
         </div>
       </div>
 
@@ -170,14 +202,8 @@ export const UsersManagementTab: React.FC = () => {
                       {/* Identity */}
                       <td className="p-3.5">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-full overflow-hidden border border-slate-200 shrink-0">
-                            {user.avatar_url ? (
-                              <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="w-full h-full bg-slate-200 flex items-center justify-center text-slate-600 font-bold">
-                                {user.full_name.charAt(0)}
-                              </div>
-                            )}
+                          <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 shrink-0 flex items-center justify-center font-bold text-xs">
+                            {user.full_name.charAt(0)}
                           </div>
                           <div>
                             <span className="font-bold text-slate-900 block">{user.full_name}</span>

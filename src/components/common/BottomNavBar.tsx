@@ -143,7 +143,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
 
   return (
     <div className="fixed bottom-3 left-1/2 -translate-x-1/2 z-30 w-[94%] max-w-md pointer-events-auto animate-in fade-in slide-in-from-bottom-3 duration-200">
-      <div className="bg-white/95 backdrop-blur-md rounded-[28px] p-2 shadow-2xl border border-slate-200/80 flex items-center justify-around ring-1 ring-slate-900/5">
+      <div className="bg-[#f4f7fb]/95 backdrop-blur-md rounded-[28px] p-2 shadow-[8px_8px_25px_rgba(166,180,200,0.35),-8px_-8px_25px_rgba(255,255,255,0.95)] border border-white/80 flex items-center justify-around ring-1 ring-slate-900/5">
         {/* 1. HOME BUTTON */}
         <button
           onClick={handleHomeClick}

@@ -5,6 +5,7 @@ export interface UserProfile {
   phone: string;
   full_name: string;
   email?: string;
+  address?: string;
   role: UserRole;
   adminRole?: AdminRole;
   avatar_url?: string;
@@ -191,11 +192,12 @@ export interface AppNotification {
 // ==========================================
 // SCRAPGO ROLE HIERARCHY & GRANULAR PERMISSIONS
 // ==========================================
-export type RoleLevel = 'MAIN_ADMIN' | 'ADMIN' | 'STAFF';
+export type RoleLevel = 'SUPER_ADMIN' | 'MAIN_ADMIN' | 'ADMIN' | 'STAFF';
 
 export type AccountStatus = 'active' | 'inactive' | 'suspended';
 
 export type AdminRole =
+  | 'SUPER_ADMIN'
   | 'MAIN_ADMIN'
   | 'PICKUP_ADMIN'
   | 'PAYOUT_ADMIN'

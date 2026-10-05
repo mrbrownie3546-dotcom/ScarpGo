@@ -23,6 +23,10 @@ export const Header: React.FC = () => {
   const [authAllowedRoles, setAuthAllowedRoles] = useState<UserRole[]>(['customer', 'staff']);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
+  if (activePortal === 'admin') {
+    return null;
+  }
+
   return (
     <>
       {/* Main Navigation Header */}

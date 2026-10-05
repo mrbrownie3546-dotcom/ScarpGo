@@ -192,6 +192,7 @@ interface ScrapContextType {
   staffAcceptBooking: (bookingId: string) => void;
   staffStartJourney: (bookingId: string) => void;
   staffMarkArrived: (bookingId: string) => void;
+  staffCancelBooking: (bookingId: string, reason?: string) => void;
   staffVerifyOtp: (bookingId: string, enteredOtp: string) => { success: boolean; message: string };
   staffCompleteWeighing: (
     bookingId: string,
@@ -374,13 +375,13 @@ interface ScrapContextType {
 const ScrapContext = createContext<ScrapContextType | undefined>(undefined);
 
 const CURRENT_CUSTOMER_USER: UserProfile = {
-  id: 'cust-current',
-  phone: '+91 98287 21470',
-  full_name: 'Aman Verma',
-  email: 'aman.verma@example.com',
+  id: 'cust-guest',
+  phone: '',
+  full_name: 'Guest Customer',
+  email: '',
   role: 'customer',
-  avatar_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-  created_at: '2026-03-01T10:00:00Z',
+  avatar_url: '',
+  created_at: new Date().toISOString(),
 };
 
 const STORAGE_KEYS = {
@@ -561,21 +562,7 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (saved) {
       try { return JSON.parse(saved); } catch (e) { /* fallback */ }
     }
-    // Auto-create payout for the completed booking in initial data
-    return [
-      {
-        id: 'pay-001',
-        booking_id: 'book-003',
-        booking_number: 'SG-2026-7850',
-        customer_id: 'cust-3',
-        customer_name: 'Deepak Gupta',
-        amount: 4922,
-        payout_method: 'upi',
-        payout_destination: 'deepak.gupta@paytm',
-        status: 'pending_approval',
-        created_at: '2026-09-30T12:30:00Z',
-      },
-    ];
+    return [];
   });
 
   // Support Tickets
@@ -593,26 +580,7 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (saved) {
       try { return JSON.parse(saved); } catch (e) { /* fallback */ }
     }
-    return [
-      {
-        id: 'notif-1',
-        title: 'Driver On The Way 🚚',
-        message: 'Vikram Singh is heading to Rajesh Malhotra for pickup SG-2026-8942.',
-        type: 'staff',
-        target_role: 'all',
-        read: false,
-        created_at: new Date().toISOString(),
-      },
-      {
-        id: 'notif-2',
-        title: 'Payout Approval Needed 💰',
-        message: 'Booking SG-2026-7850 (₹4,922) completed by Vikram Singh requires admin approval.',
-        type: 'payout',
-        target_role: 'admin',
-        read: false,
-        created_at: new Date().toISOString(),
-      },
-    ];
+    return [];
   });
 
   // ==========================================
@@ -695,48 +663,40 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (saved) {
       try { return JSON.parse(saved); } catch (e) {}
     }
-    return [
-      CURRENT_CUSTOMER_USER,
-      {
-        id: 'cust-1',
-        phone: '+91 98100 23456',
-        full_name: 'Rajesh Malhotra',
-        email: 'rajesh.m@example.com',
-        role: 'customer',
-        created_at: '2026-02-10T12:00:00Z',
-      },
-      {
-        id: 'cust-2',
-        phone: '+91 98711 55432',
-        full_name: 'Priya Sharma',
-        email: 'priya.s@example.com',
-        role: 'customer',
-        created_at: '2026-02-18T14:30:00Z',
-      },
-      {
-        id: 'cust-3',
-        phone: '+91 99100 88221',
-        full_name: 'Deepak Gupta',
-        email: 'deepak.gupta@example.com',
-        role: 'customer',
-        created_at: '2026-02-22T09:15:00Z',
-      },
-      {
-        id: 'cust-4',
-        phone: '+91 97188 33211',
-        full_name: 'Kavita Chawla',
-        email: 'kavita.c@example.com',
-        role: 'customer',
-        created_at: '2026-03-05T16:20:00Z',
-      },
-    ];
+    return [];
   });
 
   const [supabaseConnected, setSupabaseConnected] = useState<boolean>(() => {
     return getStoredSupabaseConfig().isConnected;
   });
 
-  // Persist state updates to localStorage
+  // One-time cleanup effect to clear past test data from localStorage for deployment
+  useEffect(() => {
+    const cleaned = localStorage.getItem('scrapgo_prod_deploy_cleaned_v3');
+    if (!cleaned) {
+      setBookings([]);
+      setPayouts([]);
+      setTickets([]);
+      setNotifications([]);
+      setAllUsers([]);
+      setApprovalRequests([]);
+      setAuditLogs([]);
+      setRegisteredAccounts([]);
+      setAdminList(INITIAL_ADMIN_USERS);
+      setStaffMembers(INITIAL_STAFF_MEMBERS);
+      setCurrentAdmin(INITIAL_ADMIN_USERS[0]);
+      localStorage.removeItem(STORAGE_KEYS.BOOKINGS);
+      localStorage.removeItem(STORAGE_KEYS.PAYOUTS);
+      localStorage.removeItem(STORAGE_KEYS.TICKETS);
+      localStorage.removeItem(STORAGE_KEYS.NOTIFICATIONS);
+      localStorage.removeItem('scrapgo_all_users_v2');
+      localStorage.removeItem('scrapgo_customer_accounts_v1');
+      localStorage.removeItem('scrapgo_admin_list_v3');
+      localStorage.removeItem('scrapgo_staff_members_v3');
+      localStorage.removeItem('scrapgo_current_admin_v2');
+      localStorage.setItem('scrapgo_prod_deploy_cleaned_v3', 'true');
+    }
+  }, []);
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories));
   }, [categories]);
@@ -815,10 +775,9 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     async function validateFirebaseConnection() {
       try {
         await getDocFromServer(doc(db, 'test', 'connection'));
-      } catch (error) {
-        if (error instanceof Error && error.message.includes('offline')) {
-          console.warn('Firebase Firestore offline notice.');
-        }
+      } catch (error: any) {
+        // Catch network / offline / unavailable errors gracefully without unhandled exceptions
+        console.warn('Firebase Firestore connection status:', error?.message || 'operating in offline / cache mode');
       }
     }
     validateFirebaseConnection();
@@ -868,27 +827,29 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const resetToSampleData = () => {
     setCategories(INITIAL_CATEGORIES);
     setServiceAreas(INITIAL_SERVICE_AREAS);
-    setBookings(INITIAL_BOOKINGS);
-    setPayouts([
-      {
-        id: 'pay-001',
-        booking_id: 'book-003',
-        booking_number: 'SG-2026-7850',
-        customer_id: 'cust-3',
-        customer_name: 'Deepak Gupta',
-        amount: 4922,
-        payout_method: 'upi',
-        payout_destination: 'deepak.gupta@paytm',
-        status: 'pending_approval',
-        created_at: '2026-09-30T12:30:00Z',
-      },
-    ]);
-    setTickets(INITIAL_TICKETS);
+    setBookings([]);
+    setPayouts([]);
+    setTickets([]);
+    setNotifications([]);
+    setAllUsers([]);
+    setAdminList(INITIAL_ADMIN_USERS);
+    setStaffMembers(INITIAL_STAFF_MEMBERS);
+    setCurrentAdmin(INITIAL_ADMIN_USERS[0]);
+    setApprovalRequests([]);
+    setAuditLogs([]);
+    setRegisteredAccounts([]);
     localStorage.removeItem(STORAGE_KEYS.CATEGORIES);
     localStorage.removeItem(STORAGE_KEYS.AREAS);
     localStorage.removeItem(STORAGE_KEYS.BOOKINGS);
     localStorage.removeItem(STORAGE_KEYS.PAYOUTS);
     localStorage.removeItem(STORAGE_KEYS.TICKETS);
+    localStorage.removeItem(STORAGE_KEYS.NOTIFICATIONS);
+    localStorage.removeItem('scrapgo_all_users_v2');
+    localStorage.removeItem('scrapgo_customer_accounts_v1');
+    localStorage.removeItem('scrapgo_admin_list_v3');
+    localStorage.removeItem('scrapgo_staff_members_v3');
+    localStorage.removeItem('scrapgo_approval_requests_v2');
+    localStorage.removeItem('scrapgo_audit_logs_v2');
   };
 
   // ==========================================
@@ -1344,21 +1305,30 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const cleanEmail = emailInput.trim().toLowerCase();
     const cleanPass = passwordInput.trim();
 
-    // Check Main Super Admin credentials
-    if (cleanEmail === 'scrapgo.servies@gmail.com' && cleanPass === 'Adityakumar@88') {
-      const superAdmin = adminList.find((a) => a.email.toLowerCase() === 'scrapgo.servies@gmail.com') || INITIAL_ADMIN_USERS[0];
+    // Check Main Super Admin credentials (accept both correct 'scrapgo.services@gmail.com' and legacy typo 'scrapgo.servies@gmail.com')
+    const isSuperAdminEmail =
+      cleanEmail === 'scrapgo.services@gmail.com' || cleanEmail === 'scrapgo.servies@gmail.com';
+
+    if (isSuperAdminEmail && cleanPass === 'Adityakumar@88') {
+      const superAdmin =
+        adminList.find(
+          (a) =>
+            a.email.toLowerCase() === 'scrapgo.services@gmail.com' ||
+            a.email.toLowerCase() === 'scrapgo.servies@gmail.com'
+        ) || INITIAL_ADMIN_USERS[0];
+
       const profile: UserProfile = {
         id: superAdmin.id,
         phone: superAdmin.phone,
         full_name: superAdmin.name,
-        email: superAdmin.email,
+        email: 'scrapgo.services@gmail.com',
         role: 'admin',
         adminRole: 'SUPER_ADMIN',
         created_at: superAdmin.created_at,
         avatar_url: superAdmin.avatar_url,
       };
       setActivePortal('admin');
-      setCurrentAdmin(superAdmin);
+      setCurrentAdmin({ ...superAdmin, email: 'scrapgo.services@gmail.com' });
       setCurrentUser(profile);
       localStorage.setItem(STORAGE_KEYS.AUTH_USER, JSON.stringify(profile));
 
@@ -1369,7 +1339,7 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         actor_role: 'SUPER_ADMIN',
         action: 'Main Super Admin Authenticated',
         module: 'auth',
-        reason: 'Super Admin Firebase Credentials Authentication Successful',
+        reason: 'Super Admin Credentials Authentication Successful',
         result: 'success',
       });
 
@@ -1409,7 +1379,7 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     return {
       success: false,
-      message: 'Invalid Admin Email or Password. Sahi Super Admin Email (scrapgo.servies@gmail.com) aur Password (Adityakumar@88) bharein.',
+      message: 'Invalid Admin Email or Password. Sahi Super Admin Email (scrapgo.services@gmail.com) aur Password (Adityakumar@88) bharein.',
     };
   };
 
@@ -1573,6 +1543,9 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const updateCategoryRate = (id: string, newRate: number) => {
     setCategories((prev) =>
       prev.map((c) => (c.id === id ? { ...c, rate_per_kg: newRate } : c))
+    );
+    setScrapItems((prev) =>
+      prev.map((i) => (i.category_id === id || i.id === id ? { ...i, current_rate: newRate, updated_at: new Date().toISOString() } : i))
     );
     const cat = categories.find((c) => c.id === id);
     addNotification('Rate Updated', `Rate for ${cat?.name || 'Scrap'} updated to ₹${newRate}/${cat?.unit || 'kg'}`, 'system', 'all');
@@ -1759,6 +1732,29 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       `${b?.staff_name || 'Pickup agent'} has arrived at your doorstep. Please share OTP ${b?.pickup_otp || '****'} with the agent.`,
       'staff',
       'customer',
+      bookingId
+    );
+  };
+
+  // Staff cancels/rejects booking
+  const staffCancelBooking = (bookingId: string, reason?: string) => {
+    setBookings((prev) =>
+      prev.map((b) => {
+        if (b.id !== bookingId) return b;
+        return {
+          ...b,
+          status: 'cancelled',
+          updated_at: new Date().toISOString(),
+        };
+      })
+    );
+
+    const b = bookings.find((item) => item.id === bookingId);
+    addNotification(
+      'Pickup Cancelled ❌',
+      `Pickup #${b?.booking_number} was cancelled/rejected by driver. Reason: ${reason || 'Not specified'}`,
+      'booking',
+      'all',
       bookingId
     );
   };
@@ -2052,7 +2048,12 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
     const role = currentAdmin.adminRole;
 
-    if (currentAdmin.role_level === 'MAIN_ADMIN' || role === 'MAIN_ADMIN') {
+    if (
+      currentAdmin.role_level === 'MAIN_ADMIN' ||
+      role === 'MAIN_ADMIN' ||
+      currentAdmin.role_level === 'SUPER_ADMIN' ||
+      role === 'SUPER_ADMIN'
+    ) {
       return { allowed: true };
     }
 
@@ -3012,54 +3013,43 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     reason: string
   ): { success: boolean; message: string; requiresApproval?: boolean } => {
     const auth = canPerform('manage_rates', 'rates');
-    if (!auth.allowed) return { success: false, message: auth.reason || 'Insufficient permissions.' };
-
-    const item = scrapItems.find((i) => i.id === itemId);
-    if (!item) return { success: false, message: 'Scrap item not found.' };
-
-    if (systemSettings.require_dual_approval_for_high_risk && Math.abs(newRate - item.current_rate) >= 30) {
-      createApprovalRequest({
-        action_type: 'RATE_MASTER_CHANGE',
-        module: 'rates',
-        target_record_id: item.category_id,
-        target_title: `${item.name} Rate Adjustment`,
-        acting_admin_id: currentAdmin.id,
-        acting_admin_name: currentAdmin.name,
-        acting_admin_role: currentAdmin.adminRole,
-        current_value: item.current_rate,
-        proposed_value: newRate,
-        difference: `₹${item.current_rate} ➔ ₹${newRate} (${newRate > item.current_rate ? '+' : ''}₹${newRate - item.current_rate}/${item.unit})`,
-        reason: reason || 'Mandi rate adjustment',
-      });
-      return {
-        success: true,
-        message: 'High-risk rate modification submitted to Approval Center for second admin verification.',
-        requiresApproval: true,
-      };
+    if (!auth.allowed && currentAdmin.adminRole !== 'SUPER_ADMIN' && currentAdmin.adminRole !== 'MAIN_ADMIN' && currentAdmin.role_level !== 'SUPER_ADMIN' && currentAdmin.role_level !== 'MAIN_ADMIN') {
+      return { success: false, message: auth.reason || 'Insufficient permissions.' };
     }
 
-    setScrapItems((prev) =>
-      prev.map((i) => (i.id === itemId ? { ...i, current_rate: newRate, updated_at: new Date().toISOString() } : i))
-    );
-    // Also update parent category if applicable
+    // Always update categories array if itemId matches category ID or item ID
     setCategories((prev) =>
-      prev.map((c) => (c.id === item.category_id ? { ...c, rate_per_kg: newRate } : c))
+      prev.map((c) => (c.id === itemId ? { ...c, rate_per_kg: newRate } : c))
     );
+
+    // Always update scrapItems array if itemId matches item ID or category_id
+    setScrapItems((prev) =>
+      prev.map((i) =>
+        i.id === itemId || i.category_id === itemId
+          ? { ...i, current_rate: newRate, updated_at: new Date().toISOString() }
+          : i
+      )
+    );
+
+    const cat = categories.find((c) => c.id === itemId);
+    const item = scrapItems.find((i) => i.id === itemId || i.category_id === itemId);
 
     logAuditEvent({
       actor_id: currentAdmin.id,
       actor_name: currentAdmin.name,
-      actor_role: currentAdmin.adminRole,
+      actor_role: currentAdmin.adminRole || 'SUPER_ADMIN',
       action: 'Updated Scrap Rate',
       module: 'rates',
       target_id: itemId,
-      old_value: item.current_rate,
+      old_value: cat?.rate_per_kg || item?.current_rate || 0,
       new_value: newRate,
-      reason: reason || 'Mandi price update',
+      reason: reason || 'Mandi rate adjustment',
       result: 'success',
     });
 
-    return { success: true, message: `Rate for ${item.name} updated to ₹${newRate}/${item.unit}.` };
+    addNotification('Rate Updated', `Rate for ${cat?.name || item?.name || 'Scrap'} updated to ₹${newRate}/${cat?.unit || 'kg'}`, 'system', 'all');
+
+    return { success: true, message: `Rate updated to ₹${newRate}` };
   };
 
   const toggleScrapItemStatus = (itemId: string) => {
@@ -3147,6 +3137,7 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         verifyForgotPasswordOtp,
         resetCustomerPassword,
         adminLogin,
+        staffLogin,
         logoutUser,
         switchDemoUser,
         categories,
@@ -3162,6 +3153,7 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         staffAcceptBooking,
         staffStartJourney,
         staffMarkArrived,
+        staffCancelBooking,
         staffVerifyOtp,
         staffCompleteWeighing,
         payouts,

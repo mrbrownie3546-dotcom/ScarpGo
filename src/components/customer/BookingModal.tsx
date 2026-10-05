@@ -20,6 +20,9 @@ import {
   Share2,
   Upload,
   Image as ImageIcon,
+  Mic,
+  MicOff,
+  Volume2,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -37,6 +40,57 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onClose, preselected
   }, [setOverlayActive]);
 
   const [step, setStep] = useState<1 | 2>(1);
+
+  // Voice Recognition (Web Speech API) States
+  const [isListening, setIsListening] = useState(false);
+  const [speechError, setSpeechError] = useState<string | null>(null);
+
+  const startVoiceRecognition = () => {
+    setSpeechError(null);
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      setSpeechError('Web Speech API not supported in this browser. Please type manually.');
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = language === 'hindi' ? 'hi-IN' : 'en-IN';
+
+      recognition.onstart = () => {
+        setIsListening(true);
+      };
+
+      recognition.onresult = (event: any) => {
+        const transcript = Array.from(event.results)
+          .map((result: any) => result[0])
+          .map((result: any) => result.transcript)
+          .join('');
+
+        setExpectedItems(transcript);
+      };
+
+      recognition.onerror = (event: any) => {
+        console.error('Speech recognition error', event.error);
+        setIsListening(false);
+        setSpeechError(`Voice input error: ${event.error}`);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognition.start();
+    } catch (err) {
+      console.error(err);
+      setIsListening(false);
+      setSpeechError('Could not start speech recognition.');
+    }
+  };
 
   // Form states - Start empty so customer fills them manually
   const [selectedCatIds, setSelectedCatIds] = useState<string[]>(
@@ -69,21 +123,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onClose, preselected
   // Single select for scrap category
   const toggleCategory = (id: string) => {
     setSelectedCatIds([id]);
-  };
-
-  const handleUseCurrentLocation = () => {
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setAddress(`Geo-located: Sector 14, Sonipat, Haryana (Lat ${pos.coords.latitude.toFixed(4)}, Lng ${pos.coords.longitude.toFixed(4)})`);
-        },
-        () => {
-          setAddress('Sector 15, Near Subhash Park, Sonipat, Haryana - 131001');
-        }
-      );
-    } else {
-      setAddress('Sector 15, Near Subhash Park, Sonipat, Haryana - 131001');
-    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -261,23 +300,65 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onClose, preselected
               {/* Items description & Estimated Weight */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-800 mb-1">
-                    {t('expected_items_label', 'Scrap description / items list:')}
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold text-slate-800">
+                      {t('expected_items_label', 'Scrap description / items list:')}
+                    </label>
+
+                    {/* Web Speech API Voice Button */}
+                    <button
+                      type="button"
+                      onClick={startVoiceRecognition}
+                      className={`text-[10px] font-extrabold px-2.5 py-1 rounded-lg flex items-center gap-1 transition-all cursor-pointer ${
+                        isListening
+                          ? 'bg-rose-500 text-white animate-pulse shadow-md shadow-rose-500/30'
+                          : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300'
+                      }`}
+                      title="Describe scrap materials using your voice"
+                    >
+                      {isListening ? (
+                        <>
+                          <MicOff className="w-3 h-3 animate-spin" />
+                          <span>Listening... Speak Now</span>
+                        </>
+                      ) : (
+                        <>
+                          <Mic className="w-3 h-3 text-emerald-600" />
+                          <span>🎤 Speak Items</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
                   <input
                     type="text"
                     value={expectedItems}
                     onChange={(e) => setExpectedItems(e.target.value)}
                     placeholder={
                       language === 'hindi'
-                        ? 'उदा. 5 डिब्बे, पुरानी साइकिल, अखबार'
+                        ? 'उदा. 5 डिब्बे, पुरानी साइकिल, अखबार (माइक दबाकर बोलें)'
                         : language === 'hinglish'
-                        ? 'jaise 5 boxes, purani cycle, akhbar'
-                        : 'e.g. 5 boxes, old bicycle, newspapers'
+                        ? 'jaise 5 boxes, purani cycle, akhbar (ya Speak button dabayein)'
+                        : 'e.g. 5 boxes, old bicycle, newspapers (or click Speak)'
                     }
-                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className={`w-full text-xs px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                      isListening ? 'border-rose-400 bg-rose-50/50 ring-2 ring-rose-200' : 'border-slate-300'
+                    }`}
                     required
                   />
+
+                  {speechError && (
+                    <p className="text-[10px] text-rose-500 font-semibold mt-1">
+                      ⚠️ {speechError}
+                    </p>
+                  )}
+
+                  {isListening && (
+                    <p className="text-[10px] text-emerald-700 font-bold mt-1 animate-pulse flex items-center gap-1">
+                      <Volume2 className="w-3 h-3 text-emerald-600" />
+                      <span>Recording voice... Speak items like "Old copper wire, 10 kg paper"</span>
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-800 mb-1">
@@ -335,19 +416,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onClose, preselected
                 </div>
 
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-[11px] font-semibold text-slate-600">
-                      {t('pickup_address_label', 'Pickup Address:')}
-                    </label>
-                    <button
-                      type="button"
-                      onClick={handleUseCurrentLocation}
-                      className="text-[11px] text-emerald-600 hover:text-emerald-700 font-semibold flex items-center gap-1 cursor-pointer"
-                    >
-                      <MapPin className="w-3 h-3" />
-                      <span>{t('use_current_location', '📍 Use Current GPS Location')}</span>
-                    </button>
-                  </div>
+                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                    {t('pickup_address_label', 'Pickup Address:')}
+                  </label>
                   <input
                     type="text"
                     value={address}

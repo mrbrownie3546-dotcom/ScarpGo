@@ -4,7 +4,7 @@ import { ScrapCategory } from '../../types/scrapgo';
 import { Scale, Plus, Edit2, Trash2, CheckCircle2, Search, Power, Recycle } from 'lucide-react';
 
 export const ScrapCategoriesTab: React.FC = () => {
-  const { categories, updateScrapItemRate, addCategory, toggleCategoryStatus, canPerform } = useScrap();
+  const { categories, updateCategoryRate, updateScrapItemRate, addCategory, toggleCategoryStatus } = useScrap();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [editingCat, setEditingCat] = useState<ScrapCategory | null>(null);
@@ -34,6 +34,7 @@ export const ScrapCategoriesTab: React.FC = () => {
     e.preventDefault();
     if (!editingCat || editRateInput <= 0) return;
 
+    updateCategoryRate(editingCat.id, editRateInput);
     updateScrapItemRate(editingCat.id, editRateInput, 'Updated by Admin from Scrap Rates Master');
     setEditingCat(null);
     showFeedback(`Rate for "${editingCat.name}" updated to ₹${editRateInput}/${editingCat.unit}`);

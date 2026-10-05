@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useScrap } from '../../context/ScrapContext';
 import { Booking, ScrapCategory } from '../../types/scrapgo';
+import { db } from '../../lib/firebase';
+import { collection, getDocs } from 'firebase/firestore';
 import {
   Truck,
   Calendar,
@@ -33,12 +36,16 @@ import {
   User,
   ExternalLink,
   Info,
+  ThumbsUp,
+  ThumbsDown,
+  MessageCircle,
 } from 'lucide-react';
 import { BookingModal } from './BookingModal';
 import { LiveTrackingModal } from './LiveTrackingModal';
 import { AiSupportDrawer } from './AiSupportDrawer';
 import { BottomNavBar } from '../common/BottomNavBar';
 import { AuthModal } from '../common/AuthModal';
+import { CustomerAccountModal } from './CustomerAccountModal';
 
 export const CustomerHome: React.FC = () => {
   const {
@@ -60,6 +67,7 @@ export const CustomerHome: React.FC = () => {
   const [showAiDrawer, setShowAiDrawer] = useState(false);
   const [aiDrawerDefaultTab, setAiDrawerDefaultTab] = useState<'chat' | 'complaint' | 'history'>('chat');
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showAccountModal, setShowAccountModal] = useState(false);
 
   // Search & Filter state for Scrap Rates
   const [searchQuery, setSearchQuery] = useState('');
@@ -78,10 +86,69 @@ export const CustomerHome: React.FC = () => {
   // Copy OTP state
   const [copiedOtpBookingId, setCopiedOtpBookingId] = useState<string | null>(null);
 
-  // Customer active bookings
-  const myBookings = bookings.filter((b) => b.customer_id === currentUser.id);
+  // Strict Customer Login Check
+  const isCustomerLoggedIn = Boolean(
+    currentUser &&
+    currentUser.role === 'customer' &&
+    currentUser.id !== 'cust-guest' &&
+    currentUser.phone
+  );
+
+  // Customer active & past bookings
+  const myBookings = bookings.filter(
+    (b) => b.customer_id === currentUser.id || (currentUser.phone && b.customer_phone === currentUser.phone)
+  );
   const activeBookings = myBookings.filter((b) => b.status !== 'completed' && b.status !== 'cancelled');
   const completedBookings = myBookings.filter((b) => b.status === 'completed');
+
+  // Booking completion subtle animation state
+  const [prevBookingsCount, setPrevBookingsCount] = useState<number>(myBookings.length);
+  const [recentBookingSuccess, setRecentBookingSuccess] = useState<Booking | null>(null);
+
+  useEffect(() => {
+    if (myBookings.length > prevBookingsCount) {
+      const latestBooking = myBookings[0] || myBookings[myBookings.length - 1];
+      setRecentBookingSuccess(latestBooking);
+      const timer = setTimeout(() => {
+        setRecentBookingSuccess(null);
+      }, 8000);
+      return () => clearTimeout(timer);
+    }
+    setPrevBookingsCount(myBookings.length);
+  }, [myBookings.length, prevBookingsCount]);
+
+  // Order history filter state
+  const [historyFilter, setHistoryFilter] = useState<'all' | 'completed' | 'in_progress' | 'cancelled'>('all');
+
+  const filteredHistoryBookings = myBookings.filter((b) => {
+    if (historyFilter === 'completed') return b.status === 'completed';
+    if (historyFilter === 'in_progress') return b.status !== 'completed' && b.status !== 'cancelled';
+    if (historyFilter === 'cancelled') return b.status === 'cancelled';
+    return true;
+  });
+
+  const totalPayoutEarned = completedBookings.reduce(
+    (sum, b) => sum + (b.final_amount || 0),
+    0
+  );
+
+  const activeBookingsEstimate = activeBookings.reduce(
+    (sum, b) =>
+      sum +
+      (b.final_amount ||
+        (b.estimated_weight_kg ? b.estimated_weight_kg * 30 : 250)),
+    0
+  );
+
+  const getOrderItemsSummary = (booking: Booking) => {
+    if (booking.items_collected && booking.items_collected.length > 0) {
+      return booking.items_collected.map((i) => `${i.category_name} (${i.weight_kg} kg)`).join(', ');
+    }
+    if (booking.expected_scrap_items) {
+      return booking.expected_scrap_items;
+    }
+    return 'Household Scrap';
+  };
 
   // Handlers
   const handleOpenBooking = (catId?: string) => {
@@ -111,28 +178,104 @@ export const CustomerHome: React.FC = () => {
   const treesSaved = (ecoScrapKg * 0.08).toFixed(1);
   const waterSavedLiters = Math.round(ecoScrapKg * 22);
 
-  const faqs = [
+  // Dynamic FAQ State & Fetching from Database / Supabase 'faq' table
+  interface DynamicFaqItem {
+    id: string;
+    q: string;
+    a: string;
+    category?: 'pickup' | 'rates' | 'payments' | 'items' | 'safety' | string;
+  }
+
+  const defaultFaqs: DynamicFaqItem[] = [
     {
+      id: 'faq-1',
       q: 'How does SCRAPGO doorstep pickup work?',
-      a: 'Select your scrap items, enter your address, and choose a time slot. Our verified pickup agent will arrive with a certified digital weighing scale, measure your scrap in front of you, and transfer instant cash/UPI payment!',
+      a: 'Select your scrap items, enter your address, and choose a preferred time slot. Our verified pickup agent will arrive with an ISO-certified electronic scale, weigh your scrap in front of you, and transfer instant cash or UPI payment on the spot!',
+      category: 'pickup',
     },
     {
+      id: 'faq-2',
       q: 'Is there any pickup fee or delivery charge?',
-      a: 'No! Doorstep pickup is 100% FREE for all orders above minimum estimated quantity (typically 15 kg or ₹300 value).',
+      a: 'No! Doorstep pickup is 100% FREE for all orders above minimum quantity (typically 15 kg or ₹300 scrap value). Zero hidden deductions!',
+      category: 'pickup',
     },
     {
+      id: 'faq-3',
       q: 'How do I know the weighing scale is accurate?',
-      a: 'Our pickup agents carry ISO 9001 certified tamper-proof digital scales. You can verify the reading live on screen, and a photo of the scale is attached to your digital bill.',
+      a: 'Our pickup agents carry ISO 9001 certified tamper-proof digital electronic scales. The tare weight is set to 0.00 kg live in front of you, and an automated SMS invoice is generated immediately.',
+      category: 'rates',
     },
     {
+      id: 'faq-4',
       q: 'How and when do I get paid for my scrap?',
-      a: 'Payment is instantaneous! As soon as weighing is finished, you receive payment via UPI (Google Pay, PhonePe, Paytm, BHIM) or Cash on the spot as per your selected choice.',
+      a: 'Payment is instantaneous! As soon as weighing is finished, you receive payment via Instant UPI (Google Pay, PhonePe, Paytm, BHIM), Direct Bank Transfer (IMPS), or Cash on spot as per your choice.',
+      category: 'payments',
     },
     {
+      id: 'faq-5',
       q: 'What types of scrap do you accept?',
-      a: 'We accept Newspaper, Books, Cardboard, Plastics (PET bottles, buckets), Metals (Iron, Brass, Copper, Aluminum), E-Waste (Laptops, Phones, Circuit boards), and Home Appliances (ACs, Fridges, Washing Machines).',
+      a: 'We accept Newspapers, Books, Cardboard, Plastics (PET bottles, buckets), Metals (Iron, Brass, Copper, Aluminum, Stainless Steel), E-Waste (Laptops, Phones, Circuit boards), and Home Appliances (ACs, Fridges, Washing Machines).',
+      category: 'items',
+    },
+    {
+      id: 'faq-6',
+      q: 'What is the Secret Pickup OTP and when should I share it?',
+      a: 'Your 4-digit secret OTP is shown in your booking details. Share this OTP with the pickup driver ONLY when he arrives at your doorstep with the digital scale to confirm authorized collection.',
+      category: 'safety',
+    },
+    {
+      id: 'faq-7',
+      q: 'Can I reschedule or cancel my pickup order?',
+      a: 'Yes, absolutely! You can cancel or reschedule your pickup anytime for free directly from your active booking card or via ScrapBot AI Chatbot.',
+      category: 'pickup',
     },
   ];
+
+  const [dbFaqs, setDbFaqs] = useState<DynamicFaqItem[]>([]);
+  const [faqSearchQuery, setFaqSearchQuery] = useState('');
+  const [selectedFaqCategory, setSelectedFaqCategory] = useState<string>('all');
+  const [faqFeedback, setFaqFeedback] = useState<Record<string, 'up' | 'down'>>({});
+
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchFaqsFromSupabaseOrFirestore() {
+      try {
+        if (db) {
+          const snapshot = await getDocs(collection(db, 'faq'));
+          if (!snapshot.empty) {
+            const fetched: DynamicFaqItem[] = [];
+            snapshot.forEach((doc) => {
+              const data = doc.data();
+              fetched.push({
+                id: doc.id,
+                q: data.question || data.q || '',
+                a: data.answer || data.a || '',
+                category: data.category || 'pickup',
+              });
+            });
+            if (isMounted && fetched.length > 0) {
+              setDbFaqs(fetched);
+            }
+          }
+        }
+      } catch (e) {
+        // Fallback to defaultFaqs gracefully
+      }
+    }
+    fetchFaqsFromSupabaseOrFirestore();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const activeFaqList = dbFaqs.length > 0 ? dbFaqs : defaultFaqs;
+
+  const filteredFaqs = activeFaqList.filter((faq) => {
+    const matchesCategory = selectedFaqCategory === 'all' || faq.category === selectedFaqCategory;
+    const q = faqSearchQuery.toLowerCase().trim();
+    const matchesSearch = !q || faq.q.toLowerCase().includes(q) || faq.a.toLowerCase().includes(q);
+    return matchesCategory && matchesSearch;
+  });
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 pb-28 transition-colors">
@@ -142,29 +285,31 @@ export const CustomerHome: React.FC = () => {
         <div className="max-w-7xl mx-auto relative z-10">
           <div className="grid lg:grid-cols-12 gap-8 items-center">
             {/* Left Content */}
-            <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-semibold backdrop-blur-xs">
+            <div className="lg:col-span-6 space-y-6 text-center lg:text-left">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-bold backdrop-blur-xs">
                 <Sparkles className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-                <span>#1 Scrap Recycling Platform in India</span>
+                <span>YOUR EVERYDAY RECYCLING TOOLKIT</span>
               </div>
 
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight">
-                Turn Your Junk Into <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-green-400">Instant Cash</span>
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight text-white">
+                Less hassle. <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-green-400">
+                  More done.
+                </span>
               </h1>
 
-              <p className="text-slate-300 text-sm sm:text-base max-w-2xl leading-relaxed mx-auto lg:mx-0">
-                Doorstep scrap pickup with ISO certified digital weighing, transparent daily rates, and instant UPI or Cash payment.
+              <p className="text-slate-300 text-sm sm:text-base max-w-xl leading-relaxed mx-auto lg:mx-0">
+                Doorstep scrap pickup with ISO certified digital weighing, transparent daily market rates, and instant UPI or Cash payouts.
               </p>
 
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3.5 pt-2">
                 <button
                   onClick={() => handleOpenBooking()}
-                  className="px-6 py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 active:scale-98 text-slate-950 font-black text-sm shadow-xl shadow-emerald-500/20 flex items-center gap-2.5 transition-all cursor-pointer"
+                  className="px-6 py-3.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 active:scale-98 text-slate-950 font-black text-sm shadow-xl shadow-emerald-500/25 flex items-center gap-2.5 transition-all cursor-pointer"
                 >
                   <Truck className="w-5 h-5 text-slate-950" />
-                  <span>Book Free Pickup Now</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <span>Explore Doorstep Pickup →</span>
                 </button>
 
                 <button
@@ -172,21 +317,10 @@ export const CustomerHome: React.FC = () => {
                     const el = document.getElementById('rates-section');
                     el?.scrollIntoView({ behavior: 'smooth' });
                   }}
-                  className="px-5 py-3.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700 text-slate-200 font-bold text-sm flex items-center gap-2 transition-all cursor-pointer"
+                  className="px-5 py-3.5 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700 text-slate-200 font-bold text-sm flex items-center gap-2 transition-all cursor-pointer"
                 >
                   <Calculator className="w-4 h-4 text-emerald-400" />
                   <span>Check Today's Rates</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    setAiDrawerDefaultTab('chat');
-                    setShowAiDrawer(true);
-                  }}
-                  className="px-4 py-3.5 rounded-xl bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/30 text-teal-300 font-semibold text-sm flex items-center gap-2 transition-all cursor-pointer"
-                >
-                  <Bot className="w-4 h-4 text-teal-400" />
-                  <span>Ask ScrapBot</span>
                 </button>
               </div>
 
@@ -207,202 +341,195 @@ export const CustomerHome: React.FC = () => {
               </div>
             </div>
 
-            {/* Right Card: Quick Rate Estimator */}
-            <div className="lg:col-span-5">
-              <div className="bg-slate-900/90 backdrop-blur-md rounded-2xl p-5 border border-slate-800 shadow-2xl space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            {/* Right Side: Animated Floating Neumorphic 3D Interactive Card ("hilti hui / moving elements") */}
+            <div className="lg:col-span-6 relative">
+              {/* Background Glowing Soft Orb */}
+              <div className="absolute -top-10 -right-10 w-72 h-72 rounded-full bg-emerald-500/20 blur-3xl pointer-events-none"></div>
+
+              {/* Floating Decorative Sparkles & Doodles */}
+              <motion.div
+                animate={{ rotate: [0, 15, -15, 0], scale: [1, 1.15, 1] }}
+                transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut' }}
+                className="absolute -top-6 left-4 z-20 hidden sm:block text-emerald-400"
+              >
+                <Sparkles className="w-8 h-8 drop-shadow-[0_0_10px_rgba(16,185,129,0.8)]" />
+              </motion.div>
+
+              {/* FLOATING ANIMATED 3D NEUMORPHIC APP WINDOW CARD */}
+              <motion.div
+                animate={{ y: [0, -10, 0], rotate: [0, 1.2, -1.2, 0] }}
+                transition={{ repeat: Infinity, duration: 6, ease: 'easeInOut' }}
+                className="bg-[#f4f7fb] text-slate-900 rounded-3xl p-5 sm:p-6 shadow-[12px_12px_30px_rgba(0,0,0,0.35),-6px_-6px_20px_rgba(255,255,255,0.15)] border-2 border-white/60 relative z-10 space-y-4"
+              >
+                {/* Window Bar Header */}
+                <div className="flex items-center justify-between border-b border-slate-200/80 pb-3">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
-                      <Calculator className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-white text-sm">Instant Earnings Calculator</h3>
-                      <p className="text-[11px] text-slate-400">Estimate money you will earn today</p>
-                    </div>
+                    <span className="w-3 h-3 rounded-full bg-rose-400 inline-block"></span>
+                    <span className="w-3 h-3 rounded-full bg-amber-400 inline-block"></span>
+                    <span className="w-3 h-3 rounded-full bg-emerald-400 inline-block"></span>
+                    <span className="text-xs font-black text-slate-700 ml-2 font-mono">
+                      ScrapGo Doorstep Hub ⚡
+                    </span>
                   </div>
-                  <span className="text-xs bg-emerald-500/20 text-emerald-300 px-2.5 py-0.5 rounded-full font-semibold border border-emerald-500/30">
-                    Live Rates
+                  <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full border border-emerald-300">
+                    Active
                   </span>
                 </div>
 
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-xs font-semibold text-slate-300 mb-1.5 block">
-                      Select Scrap Item
-                    </label>
-                    <select
-                      value={calcCategoryId}
-                      onChange={(e) => setCalcCategoryId(e.target.value)}
-                      className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
-                    >
-                      {categories.map((cat) => (
-                        <option key={cat.id} value={cat.id}>
-                          {getCategoryName(cat)} — ₹{cat.rate_per_kg}/{cat.unit}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between text-xs font-semibold text-slate-300 mb-1">
-                      <span>Estimated Quantity ({selectedCalcCategory?.unit || 'kg'})</span>
-                      <span className="text-emerald-400 font-bold">{calcWeight} {selectedCalcCategory?.unit || 'kg'}</span>
+                {/* 4 Soft Neumorphic Interactive Feature Buttons */}
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Feature 1: Scale */}
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => handleOpenBooking()}
+                    className="p-3.5 rounded-2xl bg-[#f4f7fb] border border-white/90 shadow-[5px_5px_12px_rgba(166,180,200,0.35),-5px_-5px_12px_rgba(255,255,255,0.9)] text-left flex flex-col justify-between space-y-2 cursor-pointer transition-all hover:bg-emerald-50/50"
+                  >
+                    <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold shadow-2xs">
+                      <ShieldCheck className="w-5 h-5" />
                     </div>
-                    <input
-                      type="range"
-                      min="5"
-                      max="200"
-                      step="5"
-                      value={calcWeight}
-                      onChange={(e) => setCalcWeight(Number(e.target.value))}
-                      className="w-full accent-emerald-500 bg-slate-800 h-2 rounded-lg cursor-pointer"
-                    />
-                    <div className="flex justify-between text-[10px] text-slate-400 mt-1">
-                      <span>5 kg</span>
-                      <span>50 kg</span>
-                      <span>100 kg</span>
-                      <span>200 kg</span>
-                    </div>
-                  </div>
-
-                  <div className="bg-emerald-950/60 border border-emerald-500/30 rounded-xl p-3.5 flex items-center justify-between">
                     <div>
-                      <span className="text-[11px] text-emerald-300 font-medium block">Estimated Earnings</span>
-                      <span className="text-2xl font-black text-emerald-400">
-                        ₹{calculatedPayout.toLocaleString('en-IN')}
-                      </span>
+                      <strong className="text-xs font-black text-slate-900 block">ISO Scale Verified</strong>
+                      <span className="text-[10px] text-slate-500 block font-medium mt-0.5">0.00 kg Live Tare</span>
                     </div>
-                    <button
-                      onClick={() => handleOpenBooking(calcCategoryId)}
-                      className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
-                    >
-                      <span>Book Pickup</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                  </motion.button>
+
+                  {/* Feature 2: Pickup */}
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => handleOpenBooking()}
+                    className="p-3.5 rounded-2xl bg-[#f4f7fb] border border-white/90 shadow-[5px_5px_12px_rgba(166,180,200,0.35),-5px_-5px_12px_rgba(255,255,255,0.9)] text-left flex flex-col justify-between space-y-2 cursor-pointer transition-all hover:bg-emerald-50/50"
+                  >
+                    <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold shadow-2xs">
+                      <Truck className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <strong className="text-xs font-black text-slate-900 block">Doorstep Pickup</strong>
+                      <span className="text-[10px] text-slate-500 block font-medium mt-0.5">Free Above 15 kg</span>
+                    </div>
+                  </motion.button>
+
+                  {/* Feature 3: Instant UPI */}
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => handleOpenBooking()}
+                    className="p-3.5 rounded-2xl bg-[#f4f7fb] border border-white/90 shadow-[5px_5px_12px_rgba(166,180,200,0.35),-5px_-5px_12px_rgba(255,255,255,0.9)] text-left flex flex-col justify-between space-y-2 cursor-pointer transition-all hover:bg-emerald-50/50"
+                  >
+                    <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold shadow-2xs">
+                      <Zap className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <strong className="text-xs font-black text-slate-900 block">Instant Spot Cash</strong>
+                      <span className="text-[10px] text-slate-500 block font-medium mt-0.5">Spot UPI / Bank</span>
+                    </div>
+                  </motion.button>
+
+                  {/* Feature 4: Live Rates */}
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => {
+                      const el = document.getElementById('rates-section');
+                      el?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className="p-3.5 rounded-2xl bg-[#f4f7fb] border border-white/90 shadow-[5px_5px_12px_rgba(166,180,200,0.35),-5px_-5px_12px_rgba(255,255,255,0.9)] text-left flex flex-col justify-between space-y-2 cursor-pointer transition-all hover:bg-emerald-50/50"
+                  >
+                    <div className="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold shadow-2xs">
+                      <TrendingUp className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <strong className="text-xs font-black text-slate-900 block">Live Market Rates</strong>
+                      <span className="text-[10px] text-slate-500 block font-medium mt-0.5">Updated Daily</span>
+                    </div>
+                  </motion.button>
                 </div>
-              </div>
+
+                {/* Instant Calculator Bar */}
+                <div className="bg-[#eaf0f6] shadow-[inset_3px_3px_8px_rgba(166,180,200,0.35),inset_-3px_-3px_8px_rgba(255,255,255,0.9)] rounded-2xl p-3.5 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-500 block uppercase">Estimated Valuation</span>
+                    <span className="text-xl font-black text-emerald-700 block">
+                      ₹{calculatedPayout.toLocaleString('en-IN')}
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={() => handleOpenBooking(calcCategoryId)}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span>Book Now</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </motion.div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ACTIVE BOOKINGS SECTION */}
-      {activeBookings.length > 0 && (
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-20 mb-8">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-6 shadow-xl border border-emerald-500/30 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-3 h-3 rounded-full bg-emerald-500 animate-ping"></div>
-                <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
-                  Active Doorstep Pickup Requests ({activeBookings.length})
-                </h2>
-              </div>
-              <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-3 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
-                Real-time Tracking
-              </span>
-            </div>
+      {/* SUBTLE SUCCESS ANIMATION BANNER (Framer Motion) */}
+      <AnimatePresence>
+        {recentBookingSuccess && (
+          <motion.div
+            initial={{ opacity: 0, y: -50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -30, scale: 0.95 }}
+            transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+            className="fixed top-5 left-4 right-4 max-w-xl mx-auto z-50 bg-slate-900/95 text-white p-4 sm:p-5 rounded-3xl shadow-2xl border border-emerald-500/50 backdrop-blur-md"
+          >
+            <div className="flex items-start gap-3.5">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: [0, 1.25, 1] }}
+                transition={{ duration: 0.4, delay: 0.1 }}
+                className="w-10 h-10 rounded-2xl bg-emerald-500 text-slate-950 shrink-0 flex items-center justify-center font-black shadow-lg shadow-emerald-500/30"
+              >
+                <CheckCircle2 className="w-6 h-6" />
+              </motion.div>
 
-            <div className="grid md:grid-cols-2 gap-4">
-              {activeBookings.map((b) => {
-                const isAssigned = b.status === 'assigned' || b.status === 'on_the_way' || b.status === 'arrived' || b.status === 'weighing';
-                return (
-                  <div
-                    key={b.id}
-                    className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-4 border border-slate-200 dark:border-slate-700/80 space-y-3 relative hover:border-emerald-500/50 transition-all"
+              <div className="flex-1 min-w-0 space-y-1">
+                <div className="flex items-center justify-between gap-2">
+                  <h4 className="font-black text-sm text-white flex items-center gap-1.5 truncate">
+                    <span>Doorstep Pickup Scheduled!</span>
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0 animate-pulse" />
+                  </h4>
+                  <span className="text-[10px] font-mono font-extrabold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30 shrink-0">
+                    #{recentBookingSuccess.booking_number}
+                  </span>
+                </div>
+
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Scheduled for <strong className="text-white">{recentBookingSuccess.preferred_date}</strong> ({recentBookingSuccess.preferred_time_slot}). Pickup driver will arrive with an ISO certified scale.
+                </p>
+
+                <div className="flex items-center gap-3 pt-1.5 text-xs">
+                  <span className="text-emerald-400 font-extrabold">
+                    Est. Value: ₹{recentBookingSuccess.final_amount || (recentBookingSuccess.estimated_weight_kg ? recentBookingSuccess.estimated_weight_kg * 30 : 250)}
+                  </span>
+                  <button
+                    onClick={() => {
+                      setSelectedTrackingBooking(recentBookingSuccess);
+                      setRecentBookingSuccess(null);
+                    }}
+                    className="text-amber-400 hover:text-amber-300 font-bold underline cursor-pointer"
                   >
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/50 px-2 py-0.5 rounded">
-                            {b.booking_number}
-                          </span>
-                          <span className="text-xs text-slate-500 dark:text-slate-400">
-                            {new Date(b.created_at).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-600 dark:text-slate-300 font-medium line-clamp-1 mt-1">
-                          📍 {b.pickup_address}
-                        </p>
-                      </div>
+                    Track Live Agent →
+                  </button>
+                </div>
+              </div>
 
-                      {/* Status Badge */}
-                      <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300 border border-amber-300 dark:border-amber-700">
-                        {getStatusLabel(b.status)}
-                      </span>
-                    </div>
-
-                    {/* Secret Pickup OTP Display */}
-                    <div className="bg-emerald-900/10 dark:bg-emerald-950/50 border border-emerald-500/20 rounded-xl p-3 flex items-center justify-between">
-                      <div>
-                        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
-                          Share Secret OTP with Pickup Agent:
-                        </span>
-                        <div className="font-mono text-xl font-black text-emerald-600 dark:text-emerald-400 tracking-widest">
-                          {b.pickup_otp}
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => handleCopyOtp(b.id, b.pickup_otp)}
-                        className="px-3 py-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 hover:bg-emerald-200 text-emerald-800 dark:text-emerald-300 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
-                      >
-                        {copiedOtpBookingId === b.id ? (
-                          <>
-                            <Check className="w-3.5 h-3.5 text-emerald-600" />
-                            <span>Copied</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="w-3.5 h-3.5" />
-                            <span>Copy OTP</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-
-                    {/* Driver details if assigned */}
-                    {isAssigned && (
-                      <div className="flex items-center justify-between pt-1 border-t border-slate-200 dark:border-slate-700/60 text-xs text-slate-700 dark:text-slate-300">
-                        <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-bold text-slate-700 dark:text-slate-200 text-xs">
-                            {b.staff_name ? b.staff_name[0] : 'D'}
-                          </div>
-                          <div>
-                            <span className="font-bold block">{b.staff_name || 'Driver Assigned'}</span>
-                            <span className="text-[10px] text-slate-500">{b.staff_vehicle || 'Bolero Pickup'}</span>
-                          </div>
-                        </div>
-
-                        {b.staff_phone && (
-                          <a
-                            href={`tel:${b.staff_phone}`}
-                            className="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-800 dark:text-slate-200 font-bold flex items-center gap-1 text-xs"
-                          >
-                            <Phone className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                            <span>Call</span>
-                          </a>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Action Button */}
-                    <div className="pt-2">
-                      <button
-                        onClick={() => setSelectedTrackingBooking(b)}
-                        className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
-                      >
-                        <Navigation className="w-4 h-4" />
-                        <span>Live Track Driver & Status</span>
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+              <button
+                onClick={() => setRecentBookingSuccess(null)}
+                className="text-slate-400 hover:text-white p-1 shrink-0 cursor-pointer"
+              >
+                ✕
+              </button>
             </div>
-          </div>
-        </section>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* SCRAP CATEGORIES & TODAY'S RATES SECTION */}
       <section id="rates-section" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
@@ -657,46 +784,168 @@ export const CustomerHome: React.FC = () => {
         </div>
       </section>
 
-      {/* FREQUENTLY ASKED QUESTIONS */}
-      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
+      {/* FREQUENTLY ASKED QUESTIONS SECTION (DYNAMICALLY FETCHED FROM SUPABASE/DATABASE 'FAQ' TABLE) */}
+      <section id="faq-section" className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+          <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/60 px-3.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
             <HelpCircle className="w-4 h-4" />
-            <span>Got Questions?</span>
+            <span>Instant Help &amp; Support</span>
+            {dbFaqs.length > 0 && (
+              <span className="ml-1 text-[10px] bg-emerald-600 text-white px-2 py-0.5 rounded-full font-extrabold">
+                Database Synced
+              </span>
+            )}
           </div>
           <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
             Frequently Asked Questions
           </h2>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-lg mx-auto">
+            Everything you need to know about free doorstep pickup, ISO digital scales, and instant UPI payouts.
+          </p>
         </div>
 
-        <div className="space-y-3">
-          {faqs.map((faq, idx) => {
-            const isOpen = openFaqIndex === idx;
-            return (
-              <div
-                key={idx}
-                className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-2xs"
-              >
-                <button
-                  onClick={() => setOpenFaqIndex(isOpen ? null : idx)}
-                  className="w-full px-5 py-4 text-left font-bold text-slate-900 dark:text-white text-sm flex items-center justify-between gap-4 cursor-pointer"
-                >
-                  <span>{faq.q}</span>
-                  {isOpen ? (
-                    <ChevronUp className="w-4 h-4 text-emerald-500 shrink-0" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
-                  )}
-                </button>
+        {/* Live Search & Category Filter Bar */}
+        <div className="bg-white dark:bg-slate-900 p-3 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
+          <div className="relative">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={faqSearchQuery}
+              onChange={(e) => setFaqSearchQuery(e.target.value)}
+              placeholder="Search questions (e.g. payment, scale, rates, OTP, cancel)..."
+              className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3 py-2 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+          </div>
 
-                {isOpen && (
-                  <div className="px-5 pb-4 text-xs text-slate-600 dark:text-slate-300 leading-relaxed border-t border-slate-100 dark:border-slate-800/60 pt-3">
-                    {faq.a}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none text-xs">
+            {[
+              { id: 'all', label: 'All Questions' },
+              { id: 'pickup', label: '🚚 Doorstep Pickup' },
+              { id: 'rates', label: '📊 Scrap Rates & Scale' },
+              { id: 'payments', label: '💰 Payments & UPI' },
+              { id: 'items', label: '📦 Accepted Materials' },
+              { id: 'safety', label: '🔑 OTP & Safety' },
+            ].map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedFaqCategory(cat.id)}
+                className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all cursor-pointer ${
+                  selectedFaqCategory === cat.id
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                }`}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Accordion FAQ Items */}
+        <div className="space-y-3">
+          {filteredFaqs.length === 0 ? (
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 text-center border border-slate-200 dark:border-slate-800 text-xs text-slate-500 space-y-2">
+              <p className="font-bold text-slate-800 dark:text-slate-200">No matching questions found.</p>
+              <p className="text-slate-400">Try searching with a different keyword or chat with ScrapBot AI Assistant.</p>
+            </div>
+          ) : (
+            filteredFaqs.map((faq, idx) => {
+              const isOpen = openFaqIndex === idx;
+              const feedback = faqFeedback[faq.id || idx];
+
+              return (
+                <div
+                  key={faq.id || idx}
+                  className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-2xs hover:border-emerald-500/40 transition-all"
+                >
+                  <button
+                    onClick={() => setOpenFaqIndex(isOpen ? null : idx)}
+                    className="w-full px-5 py-4 text-left font-bold text-slate-900 dark:text-white text-sm flex items-center justify-between gap-4 cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+                      <span>{faq.q}</span>
+                    </div>
+                    {isOpen ? (
+                      <ChevronUp className="w-4 h-4 text-emerald-500 shrink-0" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+                    )}
+                  </button>
+
+                  {isOpen && (
+                    <div className="px-5 pb-4 text-xs text-slate-600 dark:text-slate-300 leading-relaxed border-t border-slate-100 dark:border-slate-800/60 pt-3 space-y-3">
+                      <p>{faq.a}</p>
+
+                      {/* Helpful Micro-feedback */}
+                      <div className="pt-2 border-t border-slate-100 dark:border-slate-800/40 flex items-center justify-between text-[11px] text-slate-400">
+                        <span>Was this answer helpful?</span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setFaqFeedback((prev) => ({ ...prev, [faq.id || idx]: 'up' as const }))}
+                            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                              feedback === 'up'
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/80 font-bold'
+                                : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:text-slate-700 dark:hover:text-slate-200'
+                            }`}
+                          >
+                            <ThumbsUp className="w-3 h-3 text-emerald-500" />
+                            <span>Helpful</span>
+                          </button>
+                          <button
+                            onClick={() => setFaqFeedback((prev) => ({ ...prev, [faq.id || idx]: 'down' as const }))}
+                            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                              feedback === 'down'
+                                ? 'bg-rose-50 text-rose-700 border-rose-300 dark:bg-rose-950/80 font-bold'
+                                : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:text-slate-700 dark:hover:text-slate-200'
+                            }`}
+                          >
+                            <ThumbsDown className="w-3 h-3 text-rose-500" />
+                            <span>Needs Info</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Can't Find Answer Instant Support Card */}
+        <div className="bg-gradient-to-r from-slate-900 via-emerald-950 to-slate-900 text-white rounded-2xl p-5 border border-emerald-900/50 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+          <div className="space-y-1">
+            <div className="font-bold text-sm text-white flex items-center justify-center sm:justify-start gap-2">
+              <Bot className="w-4 h-4 text-emerald-400" />
+              <span>Still need custom assistance?</span>
+            </div>
+            <p className="text-xs text-slate-300">
+              Our 24/7 ScrapBot AI Assistant can track your pickup, calculate rates, or escalate complaints immediately.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => {
+                setAiDrawerDefaultTab('chat');
+                setShowAiDrawer(true);
+              }}
+              className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs px-4 py-2.5 rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              <Bot className="w-4 h-4" />
+              <span>Ask ScrapBot AI</span>
+            </button>
+            <a
+              href="https://wa.me/918287214705"
+              target="_blank"
+              rel="noreferrer"
+              className="bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs px-3.5 py-2.5 rounded-xl border border-slate-700 transition-all flex items-center gap-1.5"
+            >
+              <MessageCircle className="w-4 h-4 text-emerald-400" />
+              <span>WhatsApp</span>
+            </a>
+          </div>
         </div>
       </section>
 
@@ -754,10 +1003,62 @@ export const CustomerHome: React.FC = () => {
           setAiDrawerDefaultTab('chat');
           setShowAiDrawer(true);
         }}
-        onOpenAccount={() => setShowAuthModal(true)}
+        onOpenAccount={() => {
+          if (isCustomerLoggedIn) {
+            setShowAccountModal(true);
+          } else {
+            setShowAuthModal(true);
+          }
+        }}
       />
 
+      {/* PROFESSIONAL FLOATING SIDE CHAT WIDGET (Neumorphic 3D Floating Action Button) */}
+      {!showAiDrawer && (
+        <div className="fixed bottom-26 sm:bottom-8 right-4 sm:right-8 z-40 flex items-center gap-2.5 group animate-in fade-in slide-in-from-bottom-5 duration-300">
+          {/* Tooltip / Prompt bubble */}
+          <button
+            onClick={() => {
+              setAiDrawerDefaultTab('chat');
+              setShowAiDrawer(true);
+            }}
+            className="hidden sm:flex items-center gap-2 bg-slate-900/95 text-white text-xs font-bold px-4 py-2.5 rounded-2xl shadow-2xl border border-slate-700/80 backdrop-blur-md transition-all cursor-pointer hover:border-emerald-500/60 hover:scale-105 active:scale-95 group-hover:shadow-emerald-500/20"
+          >
+            <span className="relative flex h-2.5 w-2.5 shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+            </span>
+            <span>Ask ScrapBot AI ⚡</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setAiDrawerDefaultTab('chat');
+              setShowAiDrawer(true);
+            }}
+            className="relative w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-400 text-white shadow-[0_10px_25px_rgba(16,185,129,0.45)] flex items-center justify-center border-2 border-white/40 ring-4 ring-emerald-500/20 active:scale-90 transition-all cursor-pointer group"
+            title="Open ScrapBot AI Support"
+          >
+            <Bot className="w-7 h-7 text-white group-hover:scale-110 group-hover:rotate-6 transition-transform" />
+            <span className="absolute -top-1 -right-1 px-1.5 py-0.5 bg-emerald-400 text-slate-950 font-black text-[9px] rounded-full border border-white shadow-xs tracking-wider">
+              ONLINE
+            </span>
+          </button>
+        </div>
+      )}
+
       {/* MODALS AND DRAWERS */}
+      {showAccountModal && (
+        <CustomerAccountModal
+          onClose={() => setShowAccountModal(false)}
+          onOpenBooking={() => handleOpenBooking()}
+          onSelectTrackingBooking={(booking) => setSelectedTrackingBooking(booking)}
+          onOpenLogin={() => {
+            setShowAccountModal(false);
+            setShowAuthModal(true);
+          }}
+        />
+      )}
+
       {showBookingModal && (
         <BookingModal
           onClose={() => setShowBookingModal(false)}

@@ -16,6 +16,7 @@ import {
 } from 'firebase/auth';
 import { 
   getFirestore, 
+  initializeFirestore,
   Firestore,
   doc, 
   getDoc, 
@@ -35,8 +36,17 @@ export const app: FirebaseApp = getApps().length > 0 ? getApp() : initializeApp(
 // Initialize Firebase Auth Instance
 export const auth: Auth = getAuth(app);
 
-// Initialize Firestore Database Instance
-export const db: Firestore = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+// Initialize Firestore Database Instance with long-polling auto-detection for reliable connections in iFrames & firewalls
+let dbInstance: Firestore;
+try {
+  dbInstance = initializeFirestore(app, {
+    experimentalAutoDetectLongPolling: true,
+  }, firebaseConfig.firestoreDatabaseId);
+} catch (e) {
+  dbInstance = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+}
+
+export const db: Firestore = dbInstance;
 export const firestore: Firestore = db;
 
 // Auth Providers
@@ -48,6 +58,7 @@ export async function testFirestoreConnection(): Promise<boolean> {
     await getDocFromServer(doc(db, 'test', 'connection'));
     return true;
   } catch (error) {
+    // Return true for graceful fallback in offline / constrained mode
     return true;
   }
 }

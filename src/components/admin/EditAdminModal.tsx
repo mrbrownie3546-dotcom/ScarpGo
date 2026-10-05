@@ -195,32 +195,30 @@ export const EditAdminModal: React.FC<EditAdminModalProps> = ({
     <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div className="bg-white rounded-3xl shadow-2xl max-w-3xl w-full my-6 border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 flex flex-col max-h-[92vh]">
         {/* Modal Header */}
-        <div className="bg-slate-900 text-white p-5 px-6 border-b border-slate-800 flex items-center justify-between shrink-0">
+        <div className="bg-white text-slate-900 p-4 sm:p-5 px-6 border-b border-slate-200 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl overflow-hidden border border-amber-500/40 shrink-0">
-              <img src={admin.avatar_url} alt="" className="w-full h-full object-cover" />
+            <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-900 border border-amber-200 shrink-0 flex items-center justify-center font-extrabold text-sm">
+              {admin.name.charAt(0)}
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-black tracking-tight">Edit Administrator</h3>
-                <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 font-mono">
-                  {admin.role_level}
-                </span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-base font-extrabold text-slate-900">Edit Administrator</h3>
                 {isSelf && (
-                  <span className="text-[10px] font-bold bg-indigo-500 text-white px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] font-bold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full">
                     Active Session
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-400 mt-0.5 font-mono">
-                {admin.email} • ID: {admin.id}
+              <p className="text-xs text-slate-500 mt-0.5 font-mono">
+                {admin.email}
               </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-colors"
+            type="button"
+            className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -291,9 +289,9 @@ export const EditAdminModal: React.FC<EditAdminModalProps> = ({
             </div>
 
             {/* Custom Title & Designation */}
-            <div className="bg-amber-50/60 border border-amber-200/80 rounded-2xl p-4 space-y-2.5">
-              <label className="font-black text-amber-950 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2.5">
+              <label className="font-bold text-slate-800 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
                 <span>Admin Professional Title / Designation</span>
               </label>
 
@@ -301,7 +299,7 @@ export const EditAdminModal: React.FC<EditAdminModalProps> = ({
                 <select
                   value={customTitle}
                   onChange={(e) => setCustomTitle(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-amber-300 rounded-xl font-bold text-amber-950"
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl font-bold text-slate-800"
                 >
                   {ADMIN_DESIGNATIONS.map((title) => (
                     <option key={title} value={title}>
@@ -595,26 +593,26 @@ export const EditAdminModal: React.FC<EditAdminModalProps> = ({
         </form>
 
         {/* Modal Footer */}
-        <div className="bg-slate-50 p-4 px-6 border-t border-slate-200 flex items-center justify-between shrink-0">
-          <div className="text-[11px] text-slate-500 flex items-center gap-1.5">
-            <Lock className="w-3.5 h-3.5 text-slate-400" />
-            <span>Audited by {currentAdmin.name}</span>
+        <div className="bg-slate-50 p-3.5 sm:p-4 px-4 sm:px-6 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 shrink-0">
+          <div className="text-[11px] text-slate-500 flex items-center gap-1.5 truncate max-w-[160px] sm:max-w-none">
+            <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+            <span className="truncate">Audited by {currentAdmin.name}</span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 ml-auto">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl text-slate-700 hover:bg-slate-200 font-bold transition-colors"
+              className="px-4 py-2 rounded-xl text-slate-700 hover:bg-slate-200 font-bold text-xs transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={handleSubmit}
-              className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black shadow-xs transition-all flex items-center gap-1.5"
+              className="px-4 sm:px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
             >
-              <Edit2 className="w-4 h-4" />
+              <Edit2 className="w-3.5 h-3.5" />
               <span>Save Modifications</span>
             </button>
           </div>

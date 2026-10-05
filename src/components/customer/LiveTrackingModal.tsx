@@ -126,88 +126,35 @@ export const LiveTrackingModal: React.FC<LiveTrackingModalProps> = ({ booking, o
             )}
           </div>
 
-          {/* Interactive Simulated GPS Map Canvas */}
-          <div className="relative rounded-2xl overflow-hidden border border-slate-300 bg-slate-900 h-56 sm:h-64 shadow-inner flex flex-col justify-between p-4">
-            {/* Background Map Grid simulation */}
-            <div
-              className="absolute inset-0 opacity-20 pointer-events-none"
-              style={{
-                backgroundImage:
-                  'radial-gradient(circle at 20% 20%, #10b981 1px, transparent 1px), radial-gradient(circle at 80% 80%, #3b82f6 1px, transparent 1px)',
-                backgroundSize: '24px 24px',
-              }}
-            ></div>
-
-            {/* Simulated Road Route SVG */}
-            <svg className="absolute inset-0 w-full h-full pointer-events-none">
-              <path
-                d="M 60 180 Q 150 140 240 160 T 420 90 T 540 60"
-                fill="transparent"
-                stroke="#334155"
-                strokeWidth="10"
-                strokeLinecap="round"
-              />
-              <path
-                d="M 60 180 Q 150 140 240 160 T 420 90 T 540 60"
-                fill="transparent"
-                stroke="#10b981"
-                strokeWidth="4"
-                strokeDasharray="6 6"
-                className="animate-pulse"
-              />
-            </svg>
-
-            {/* Map Top Overlay */}
-            <div className="relative z-10 flex items-center justify-between text-xs text-white">
-              <div className="bg-slate-950/80 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                <span className="font-semibold">Live GPS Simulation</span>
-                <span className="text-slate-400">• Sonipat Sector 14-15 Zone</span>
+          {/* Clean Step Progress Bar (No Map) */}
+          <div className="bg-slate-900 text-white rounded-2xl p-4 sm:p-5 shadow-lg border border-slate-800 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block">Pickup Status</span>
+                <p className="text-sm sm:text-base font-bold">{getStatusLabel(booking.status)}</p>
               </div>
-              <div className="bg-slate-950/80 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-700 text-emerald-400 font-mono font-bold">
-                {booking.staff_distance_km ? `${booking.staff_distance_km} KM` : 'At Location'}
-              </div>
+              {isEnRoute && (
+                <div className="text-right bg-emerald-500/10 px-3 py-1.5 rounded-xl border border-emerald-500/20">
+                  <span className="text-[10px] text-emerald-400 font-bold block uppercase">Est. Arrival</span>
+                  <span className="text-sm sm:text-base font-black text-emerald-400">~{booking.staff_eta_minutes ?? 12} min</span>
+                </div>
+              )}
             </div>
 
-            {/* Visual Markers inside Map */}
-            <div className="relative z-10 flex items-center justify-between my-auto px-6">
-              {/* Staff Driver Pin */}
-              <div
-                className="transition-all duration-1000 flex flex-col items-center"
-                style={{ transform: `translateX(${Math.min(progressPct * 3.5, 320)}px)` }}
-              >
-                <div className="relative group">
-                  <div className="w-11 h-11 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-lg shadow-amber-500/50 border-2 border-white animate-bounce">
-                    <Truck className="w-6 h-6" />
-                  </div>
-                  <span className="absolute -top-6 left-1/2 -translate-x-1/2 bg-amber-950/90 text-amber-200 text-[10px] px-2 py-0.5 rounded whitespace-nowrap font-bold">
-                    {booking.staff_name || 'Driver'}
-                  </span>
-                </div>
+            {/* Visual Step Indicator */}
+            <div className="grid grid-cols-4 gap-2 text-center text-[10px] sm:text-xs font-semibold pt-2 border-t border-slate-800">
+              <div className={`p-2 rounded-xl border ${booking.status !== 'pending' ? 'bg-emerald-950/80 border-emerald-500/40 text-emerald-300' : 'bg-slate-800 border-slate-700 text-slate-400'}`}>
+                <span>1. Scheduled</span>
               </div>
-
-              {/* Customer Destination Pin */}
-              <div className="flex flex-col items-center ml-auto">
-                <div className="relative">
-                  <div className="w-11 h-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-500/40 border-2 border-white">
-                    <MapPin className="w-6 h-6" />
-                  </div>
-                  <span className="absolute -top-6 left-1/2 -translate-x-1/2 bg-emerald-950/90 text-emerald-200 text-[10px] px-2 py-0.5 rounded whitespace-nowrap font-bold">
-                    Your Home
-                  </span>
-                </div>
+              <div className={`p-2 rounded-xl border ${booking.status === 'assigned' || isEnRoute || isArrived || isCompleted ? 'bg-emerald-950/80 border-emerald-500/40 text-emerald-300' : 'bg-slate-800 border-slate-700 text-slate-400'}`}>
+                <span>2. Agent Assigned</span>
               </div>
-            </div>
-
-            {/* Map Bottom Stats */}
-            <div className="relative z-10 flex items-center justify-between text-[11px] text-slate-300 bg-slate-950/80 backdrop-blur-md p-2 rounded-xl border border-slate-700">
-              <span className="truncate max-w-[280px]">
-                <strong className="text-white">To: </strong>
-                {booking.pickup_address}
-              </span>
-              <span className="text-emerald-400 font-semibold shrink-0">
-                {isCompleted ? 'Finished' : isArrived ? 'Arrived' : `ETA: ~${booking.staff_eta_minutes ?? 10} min`}
-              </span>
+              <div className={`p-2 rounded-xl border ${isEnRoute || isArrived || isCompleted ? 'bg-emerald-950/80 border-emerald-500/40 text-emerald-300' : 'bg-slate-800 border-slate-700 text-slate-400'}`}>
+                <span>3. On The Way</span>
+              </div>
+              <div className={`p-2 rounded-xl border ${isArrived || isCompleted ? 'bg-emerald-950/80 border-emerald-500/40 text-emerald-300' : 'bg-slate-800 border-slate-700 text-slate-400'}`}>
+                <span>4. Arrived</span>
+              </div>
             </div>
           </div>
 

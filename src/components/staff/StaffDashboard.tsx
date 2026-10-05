@@ -17,6 +17,9 @@ import {
   ChevronRight,
   AlertCircle,
   QrCode,
+  XCircle,
+  Ban,
+  X,
 } from 'lucide-react';
 import { OtpVerificationModal } from './OtpVerificationModal';
 import { DigitalScaleCalculator } from './DigitalScaleCalculator';
@@ -27,6 +30,7 @@ export const StaffDashboard: React.FC = () => {
     bookings,
     staffStartJourney,
     staffMarkArrived,
+    staffCancelBooking,
   } = useScrap();
 
   const [activeTab, setActiveTab] = useState<'assigned' | 'active' | 'completed'>('assigned');
@@ -35,6 +39,9 @@ export const StaffDashboard: React.FC = () => {
   // Modals
   const [otpBooking, setOtpBooking] = useState<Booking | null>(null);
   const [scaleBooking, setScaleBooking] = useState<Booking | null>(null);
+  const [rejectingBooking, setRejectingBooking] = useState<Booking | null>(null);
+  const [cancelReason, setCancelReason] = useState('Customer not available at location');
+  const [cancelNotes, setCancelNotes] = useState('');
 
   // Filter bookings assigned to this staff driver
   const myBookings = bookings.filter((b) => b.staff_id === selectedStaffAgent.id);
@@ -73,13 +80,8 @@ export const StaffDashboard: React.FC = () => {
       <div className="bg-slate-900 text-white rounded-2xl p-4 sm:p-5 shadow-lg border border-slate-800">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
-            <div className="relative">
-              <img
-                src={selectedStaffAgent.avatar_url}
-                alt={selectedStaffAgent.full_name}
-                className="w-14 h-14 rounded-2xl object-cover border-2 border-amber-500 shadow-md"
-              />
-              <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-slate-900 rounded-full"></span>
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center justify-center font-black text-lg shrink-0">
+              {selectedStaffAgent.full_name.charAt(0)}
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -217,6 +219,23 @@ export const StaffDashboard: React.FC = () => {
                     <span>Slot: {booking.preferred_date} ({booking.preferred_time_slot})</span>
                   </span>
                 </div>
+
+                {/* Dedicated Cancel / Reject button directly under the status section */}
+                {!isDone && booking.status !== 'cancelled' && (
+                  <div className="mt-2.5 pt-2 flex items-center justify-between bg-rose-50/90 border border-rose-200/80 px-3 py-2 rounded-xl shadow-2xs">
+                    <span className="text-[11px] font-bold text-rose-900 flex items-center gap-1.5">
+                      <Ban className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                      <span>Need to reject or cancel this pickup?</span>
+                    </span>
+                    <button
+                      onClick={() => setRejectingBooking(booking)}
+                      className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-[11px] rounded-lg shadow-2xs transition-all flex items-center gap-1 cursor-pointer active:scale-95 shrink-0"
+                    >
+                      <XCircle className="w-3.5 h-3.5" />
+                      <span>Cancel / Reject</span>
+                    </button>
+                  </div>
+                )}
 
                 {/* Customer and Pickup Details */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-3 text-xs">
@@ -433,6 +452,80 @@ export const StaffDashboard: React.FC = () => {
           onClose={() => setScaleBooking(null)}
           onComplete={() => setScaleBooking(null)}
         />
+      )}
+
+      {/* Cancel / Reject Confirmation Modal */}
+      {rejectingBooking && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-5 max-w-md w-full shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2 text-rose-600">
+                <XCircle className="w-5 h-5" />
+                <h3 className="font-extrabold text-base text-slate-900">Cancel / Reject Pickup</h3>
+              </div>
+              <button
+                onClick={() => setRejectingBooking(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600">
+              Are you sure you want to cancel or reject pickup request{' '}
+              <strong className="text-slate-900 font-mono">#{rejectingBooking.booking_number}</strong> for{' '}
+              <strong className="text-slate-900">{rejectingBooking.customer_name}</strong>?
+            </p>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Select Reason for Cancellation:</label>
+              <select
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                className="w-full text-xs font-semibold px-3 py-2.5 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none"
+              >
+                <option value="Customer not available at location">Customer not available at location</option>
+                <option value="Customer refused pickup / Changed mind">Customer refused pickup / Changed mind</option>
+                <option value="Inaccurate scrap description / Restricted materials">Inaccurate scrap description / Restricted materials</option>
+                <option value="Vehicle breakdown / Traffic delay">Vehicle breakdown / Traffic delay</option>
+                <option value="Address unreachable / Incorrect details">Address unreachable / Incorrect details</option>
+                <option value="Other reason">Other reason</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Additional Notes (Optional):</label>
+              <textarea
+                value={cancelNotes}
+                onChange={(e) => setCancelNotes(e.target.value)}
+                placeholder="Provide details for dispatch & admin..."
+                rows={2}
+                className="w-full text-xs p-2.5 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+              <button
+                onClick={() => setRejectingBooking(null)}
+                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+              >
+                Keep Pickup
+              </button>
+              <button
+                onClick={() => {
+                  const fullReason = cancelNotes ? `${cancelReason} - ${cancelNotes}` : cancelReason;
+                  staffCancelBooking(rejectingBooking.id, fullReason);
+                  setRejectingBooking(null);
+                  setCancelNotes('');
+                }}
+                className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-sm transition-colors cursor-pointer flex items-center justify-center gap-1.5 active:scale-98"
+              >
+                <XCircle className="w-4 h-4" />
+                <span>Confirm Cancel / Reject</span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

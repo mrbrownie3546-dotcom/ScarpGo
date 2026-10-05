@@ -173,8 +173,8 @@ export const EditStaffModal: React.FC<EditStaffModalProps> = ({
         {/* Header */}
         <div className="bg-slate-900 text-white p-5 px-6 border-b border-slate-800 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl overflow-hidden border border-blue-500/40 shrink-0">
-              <img src={staff.avatar_url} alt="" className="w-full h-full object-cover" />
+            <div className="w-10 h-10 rounded-2xl bg-blue-800 text-blue-100 border border-blue-700 shrink-0 flex items-center justify-center font-black text-sm">
+              {staff.name.charAt(0)}
             </div>
             <div>
               <div className="flex items-center gap-2">
