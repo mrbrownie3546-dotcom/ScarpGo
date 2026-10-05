@@ -20,6 +20,8 @@ import {
   ShieldCheck,
   Clock,
   Sparkles,
+  ClipboardList,
+  UserCheck,
 } from 'lucide-react';
 
 interface CustomerAccountModalProps {
@@ -401,30 +403,107 @@ export const CustomerAccountModal: React.FC<CustomerAccountModalProps> = ({
                   </button>
                 </div>
               ) : (
-                <div className="grid sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   {activeBookings.map((b) => {
-                    const isAssigned =
-                      b.status === 'assigned' ||
-                      b.status === 'on_the_way' ||
-                      b.status === 'arrived' ||
-                      b.status === 'weighing';
+                    const getProgressStepIndex = (status: string): number => {
+                      switch (status) {
+                        case 'pending':
+                          return 0; // Request Received
+                        case 'assigned':
+                          return 1; // Agent Assigned
+                        case 'on_the_way':
+                        case 'arrived':
+                        case 'weighing':
+                          return 2; // In Transit
+                        case 'completed':
+                          return 3; // Completed
+                        default:
+                          return 0;
+                      }
+                    };
+
+                    const currentStep = getProgressStepIndex(b.status);
+                    const trackerSteps = [
+                      { label: 'Request Received', icon: ClipboardList },
+                      { label: 'Agent Assigned', icon: UserCheck },
+                      { label: 'In Transit', icon: Truck },
+                      { label: 'Completed', icon: CheckCircle2 },
+                    ];
+
                     return (
                       <div
                         key={b.id}
-                        className="bg-white dark:bg-slate-800 rounded-3xl p-4 border border-slate-200 dark:border-slate-700 space-y-3 shadow-xs"
+                        className="bg-white dark:bg-slate-800 rounded-3xl p-5 border border-slate-200 dark:border-slate-700 space-y-4 shadow-xs"
                       >
                         <div className="flex items-start justify-between">
                           <div>
-                            <span className="font-mono text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 rounded-md">
+                            <span className="font-mono text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950 px-2.5 py-1 rounded-lg border border-emerald-300 dark:border-emerald-800">
                               {b.booking_number}
                             </span>
-                            <p className="text-xs text-slate-600 dark:text-slate-300 font-medium line-clamp-1 mt-1">
+                            <p className="text-xs text-slate-600 dark:text-slate-300 font-semibold line-clamp-1 mt-1.5">
                               📍 {b.pickup_address}
                             </p>
                           </div>
-                          <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300">
+                          <span className="text-[11px] font-extrabold px-3 py-1 rounded-full bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 border border-amber-300">
                             {getStatusLabel(b.status)}
                           </span>
+                        </div>
+
+                        {/* VISUAL 4-STEP PROGRESS INDICATOR TRACKER */}
+                        <div className="bg-slate-50 dark:bg-slate-900/80 rounded-2xl p-4 border border-slate-200/80 dark:border-slate-700/80 space-y-3">
+                          <div className="flex items-center justify-between text-[11px] font-bold text-slate-500">
+                            <span>Status Progress:</span>
+                            <span className="text-emerald-700 dark:text-emerald-400 font-extrabold">
+                              Step {currentStep + 1} of 4: {trackerSteps[currentStep]?.label}
+                            </span>
+                          </div>
+
+                          <div className="relative flex items-center justify-between px-2 pt-1">
+                            {/* Line background */}
+                            <div className="absolute top-[18px] left-6 right-6 h-1 bg-slate-200 dark:bg-slate-700 rounded-full -z-0" />
+                            {/* Active filled line */}
+                            <div
+                              className="absolute top-[18px] left-6 h-1 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full -z-0 transition-all duration-500"
+                              style={{ width: `calc(${currentStep * 33.33}% - 8px)` }}
+                            />
+
+                            {trackerSteps.map((s, idx) => {
+                              const isDone = idx < currentStep;
+                              const isCurrent = idx === currentStep;
+                              const StepIcon = s.icon;
+
+                              return (
+                                <div key={idx} className="relative z-10 flex flex-col items-center">
+                                  <div
+                                    className={`w-9 h-9 rounded-full flex items-center justify-center font-bold transition-all ${
+                                      isDone
+                                        ? 'bg-emerald-600 text-white shadow-xs'
+                                        : isCurrent
+                                        ? 'bg-gradient-to-tr from-emerald-500 to-teal-600 text-white ring-4 ring-emerald-400/30 scale-110 shadow-md'
+                                        : 'bg-white dark:bg-slate-800 text-slate-400 border border-slate-300 dark:border-slate-700'
+                                    }`}
+                                  >
+                                    {isDone ? (
+                                      <Check className="w-4 h-4 text-white" />
+                                    ) : (
+                                      <StepIcon className="w-4 h-4" />
+                                    )}
+                                  </div>
+                                  <span
+                                    className={`text-[10px] font-bold mt-1.5 text-center max-w-[70px] leading-tight ${
+                                      isCurrent
+                                        ? 'text-emerald-700 dark:text-emerald-400 font-black'
+                                        : isDone
+                                        ? 'text-slate-700 dark:text-slate-300'
+                                        : 'text-slate-400'
+                                    }`}
+                                  >
+                                    {s.label}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
 
                         {/* Secret OTP Display */}

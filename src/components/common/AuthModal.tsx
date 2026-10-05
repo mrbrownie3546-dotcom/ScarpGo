@@ -93,6 +93,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Security Rate Limiting & Lockout Protection
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [lockoutSeconds, setLockoutSeconds] = useState(0);
+  const MAX_ATTEMPTS = 5;
+
+  const { t } = useScrap();
+
+  useEffect(() => {
+    if (lockoutSeconds > 0) {
+      const timer = setInterval(() => {
+        setLockoutSeconds((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [lockoutSeconds]);
+
   const resetAllFormStates = () => {
     setEmail('');
     setPassword('');
@@ -292,16 +308,26 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     e.preventDefault();
     setErrorMsg(null);
 
-    if (!email.trim() || !password.trim()) {
+    if (lockoutSeconds > 0) {
+      setErrorMsg(t('lockout_active_error', '🔒 Security Lockout Active: Too many failed attempts. Account temporarily locked for 60 seconds.'));
+      return;
+    }
+
+    const inputEmail = email.trim().toLowerCase();
+    const inputPassword = password.trim();
+
+    if (!inputEmail || !inputPassword) {
       setErrorMsg('Kripya Staff Email aur Password bharein.');
+      return;
+    }
+
+    if (inputPassword.length < 4) {
+      setErrorMsg(t('password_too_short', '⚠️ Security Rule: Password must be at least 4 characters long.'));
       return;
     }
 
     setLoading(true);
     try {
-      const inputEmail = email.trim().toLowerCase();
-      const inputPassword = password.trim();
-
       const staff = staffMembers.find((s) => s.email.toLowerCase() === inputEmail);
 
       if (staff || inputEmail.includes('staff') || inputPassword === 'staff123') {
@@ -316,12 +342,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           vehicle_number: staff?.vehicle_number || 'HR 10 AB 4921 (Mahindra Bolero)',
         };
 
+        setFailedAttempts(0);
         try { confetti({ particleCount: 50, spread: 50 }); } catch (e) {}
         setCurrentUser(staffProfile);
         setActivePortal('staff');
         onClose();
       } else {
-        setErrorMsg('Galat Email ya Password!');
+        const nextFailed = failedAttempts + 1;
+        setFailedAttempts(nextFailed);
+        if (nextFailed >= MAX_ATTEMPTS) {
+          setLockoutSeconds(60);
+          setErrorMsg(t('lockout_active_error', '🔒 Security Lockout Active: Too many failed attempts. Account temporarily locked for 60 seconds.'));
+        } else {
+          setErrorMsg(t('invalid_credentials_error', '🔐 Security Alert: Entered Email Address & Password credentials do not match our records.'));
+        }
       }
     } catch (err: any) {
       setErrorMsg('Staff Login Error. Kripya Admin se sampark karein.');
@@ -337,20 +371,41 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     e.preventDefault();
     setErrorMsg(null);
 
-    if (!email.trim() || !password.trim()) {
+    if (lockoutSeconds > 0) {
+      setErrorMsg(t('lockout_active_error', '🔒 Security Lockout Active: Too many failed attempts. Account temporarily locked for 60 seconds.'));
+      return;
+    }
+
+    const inputEmail = email.trim().toLowerCase();
+    const inputPassword = password.trim();
+
+    if (!inputEmail || !inputPassword) {
       setErrorMsg('Kripya Admin Email aur Password bharein.');
       return;
     }
 
+    if (inputPassword.length < 4) {
+      setErrorMsg(t('password_too_short', '⚠️ Security Rule: Password must be at least 4 characters long.'));
+      return;
+    }
+
     setLoading(true);
-    const res = await adminLogin(email.trim(), password.trim());
+    const res = await adminLogin(inputEmail, inputPassword);
     setLoading(false);
 
     if (res.success) {
+      setFailedAttempts(0);
       try { confetti({ particleCount: 70, spread: 70 }); } catch (e) {}
       onClose();
     } else {
-      setErrorMsg(res.message);
+      const nextFailed = failedAttempts + 1;
+      setFailedAttempts(nextFailed);
+      if (nextFailed >= MAX_ATTEMPTS) {
+        setLockoutSeconds(60);
+        setErrorMsg(t('lockout_active_error', '🔒 Security Lockout Active: Too many failed attempts. Account temporarily locked for 60 seconds.'));
+      } else {
+        setErrorMsg(t('invalid_credentials_error', '🔐 Security Alert: Entered Email Address & Password credentials do not match our records.'));
+      }
     }
   };
 
@@ -441,11 +496,32 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </div>
           )}
 
-          {/* Error Banner */}
+          {/* Glassmorphic Security Error Banner */}
           {errorMsg && (
-            <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-semibold flex items-center gap-2 animate-in fade-in">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>{errorMsg}</span>
+            <div className="p-3.5 rounded-2xl bg-rose-50/90 dark:bg-rose-950/80 border-2 border-rose-300 dark:border-rose-800 text-rose-950 dark:text-rose-100 shadow-md animate-in fade-in zoom-in-95 duration-200 relative overflow-hidden space-y-1">
+              <div className="flex items-start gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-rose-200/80 dark:bg-rose-900/80 text-rose-800 dark:text-rose-200 flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+                  <ShieldAlert className="w-4.5 h-4.5 text-rose-700 dark:text-rose-300 animate-pulse" />
+                </div>
+                <div className="flex-1 min-w-0 space-y-1 text-xs">
+                  <div className="font-extrabold text-rose-950 dark:text-white flex items-center justify-between gap-2">
+                    <span>Security Alert</span>
+                    {failedAttempts > 0 && lockoutSeconds === 0 && (
+                      <span className="text-[10px] font-mono bg-rose-200/90 dark:bg-rose-900 text-rose-950 dark:text-rose-100 px-2 py-0.5 rounded-full font-black">
+                        Attempts: {MAX_ATTEMPTS - failedAttempts}/{MAX_ATTEMPTS}
+                      </span>
+                    )}
+                    {lockoutSeconds > 0 && (
+                      <span className="text-[10px] font-mono bg-amber-300 text-amber-950 px-2 py-0.5 rounded-full font-black animate-pulse">
+                        Locked ({lockoutSeconds}s)
+                      </span>
+                    )}
+                  </div>
+                  <p className="font-semibold leading-relaxed text-rose-900 dark:text-rose-200">
+                    {errorMsg}
+                  </p>
+                </div>
+              </div>
             </div>
           )}
 

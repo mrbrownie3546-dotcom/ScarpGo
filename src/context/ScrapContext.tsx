@@ -1144,7 +1144,7 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       } else {
         return {
           success: false,
-          message: 'Galat Phone Number ya Password! Kripya sahi details enter karein ya Forgot Password par click karein.',
+          message: '🔐 Security Alert: Phone Number / Email ID ya Password me se koi ek galat hai. Kripya dono credentials dobara check karke enter karein.',
         };
       }
     } catch (err: any) {
@@ -1379,7 +1379,7 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     return {
       success: false,
-      message: 'Invalid Admin Email or Password. Sahi Super Admin Email (scrapgo.services@gmail.com) aur Password (Adityakumar@88) bharein.',
+      message: '🔐 Security Alert: Admin Email Address ya Password dono me se koi galat hai. Sahi Admin credentials enter karein.',
     };
   };
 

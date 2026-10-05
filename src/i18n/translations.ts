@@ -9,6 +9,28 @@ export interface Translations {
 }
 
 export const TRANSLATIONS: Translations = {
+  // Security & Auth Errors
+  invalid_credentials_error: {
+    english: '🔐 Authentication Error: The Email Address or Password you entered is incorrect. Both fields must match our verified records.',
+    hindi: '🔐 सुरक्षा त्रुटि: आपके द्वारा दर्ज किया गया ईमेल पता और पासवर्ड दोनों अमान्य हैं। कृपया अपने विवरण की जांच करें।',
+    hinglish: '🔐 Security Alert: Aapka Email Address aur Password dono galat hain. Kripya sahi credentials check karke dobara daalein.',
+  },
+  invalid_email_format: {
+    english: '⚠️ Invalid Email Format: Please enter a valid email address (e.g. driver@scrapgo.in).',
+    hindi: '⚠️ अमान्य ईमेल प्रारूप: कृपया एक वैध ईमेल पता दर्ज करें (उदा. driver@scrapgo.in)।',
+    hinglish: '⚠️ Invalid Email: Kripya sahi format me Email ID daalein (jaise driver@scrapgo.in).',
+  },
+  password_too_short: {
+    english: '⚠️ Security Requirement: Password must be at least 4 characters long.',
+    hindi: '⚠️ सुरक्षा आवश्यकता: पासवर्ड कम से कम 4 अक्षरों का होना चाहिए।',
+    hinglish: '⚠️ Security Rule: Password kam se kam 4 characters ka hona zaroori hai.',
+  },
+  lockout_active_error: {
+    english: '🔒 Security Lockout Active: Too many failed attempts. Account temporarily locked for 60 seconds.',
+    hindi: '🔒 सुरक्षा लॉकआउट सक्रिय: बहुत अधिक असफल प्रयास। खाता 60 सेकंड के लिए अस्थायी रूप से लॉक है।',
+    hinglish: '🔒 Security Lockout Active: Bahut zyada galat attempts! Account 60 seconds ke liye locked hai.',
+  },
+
   // Brand & Meta
   tagline: {
     english: 'BUY • SELL • RECYCLE',

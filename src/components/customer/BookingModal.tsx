@@ -180,22 +180,26 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onClose, preselected
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full max-h-[92vh] flex flex-col overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div className="bg-[#f4f7fb] dark:bg-slate-900 rounded-[32px] shadow-[12px_12px_35px_rgba(166,180,200,0.4),-12px_-12px_35px_rgba(255,255,255,0.95)] dark:shadow-[12px_12px_35px_rgba(0,0,0,0.7),-12px_-12px_35px_rgba(30,41,59,0.5)] border border-white/90 dark:border-slate-800 max-w-xl w-full max-h-[92vh] flex flex-col overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
         {/* Modal Header */}
-        <div className="bg-slate-900 text-white p-4 sm:p-5 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-[#ebf2fa] via-[#f4f7fb] to-[#eaf0f8] dark:from-slate-800 dark:to-slate-800/80 p-4 sm:p-5 flex items-center justify-between border-b border-white/80 dark:border-slate-700/80">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
-              <Truck className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center shadow-md shadow-emerald-600/30 shrink-0">
+              <Truck className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-bold">{t('book_modal_title', 'Schedule Free Doorstep Pickup')}</h2>
-              <p className="text-xs text-slate-400">{t('book_modal_sub', 'Zero pickup fee • Certified electronic scale • Instant payout')}</p>
+              <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+                {t('book_modal_title', 'Schedule Free Doorstep Pickup')}
+              </h2>
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                {t('book_modal_sub', 'Zero pickup fee • Certified electronic scale • Instant payout')}
+              </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+            className="p-2 rounded-2xl bg-white dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white border border-slate-200 dark:border-slate-700 shadow-xs transition-all cursor-pointer active:scale-95"
           >
             <X className="w-5 h-5" />
           </button>
@@ -271,24 +275,24 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onClose, preselected
                 <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
                   {t('select_scrap_items', 'Select Scrap Materials to Sell:')}
                 </label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                   {categories.map((cat) => {
                     const isSelected = selectedCatIds.includes(cat.id);
                     return (
                       <div
                         key={cat.id}
                         onClick={() => toggleCategory(cat.id)}
-                        className={`p-2.5 rounded-xl border text-xs cursor-pointer transition-all flex flex-col justify-between ${
+                        className={`p-3 rounded-2xl text-xs cursor-pointer transition-all flex flex-col justify-between active:scale-95 select-none ${
                           isSelected
-                            ? 'bg-emerald-50 border-emerald-500 shadow-xs ring-1 ring-emerald-500'
-                            : 'bg-white border-slate-200 hover:border-slate-300'
+                            ? 'bg-gradient-to-br from-[#15803d] to-[#047857] text-white border border-emerald-400 shadow-[5px_5px_15px_rgba(16,185,129,0.38),-3px_-3px_10px_rgba(255,255,255,0.8)] font-black'
+                            : 'bg-[#f4f7fb] dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-white/90 dark:border-slate-700 shadow-[4px_4px_10px_rgba(166,180,200,0.28),-4px_-4px_10px_rgba(255,255,255,0.95)] hover:border-emerald-400 hover:scale-[1.02]'
                         }`}
                       >
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-slate-900 truncate">{getCategoryName(cat)}</span>
-                          {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="font-bold truncate">{getCategoryName(cat)}</span>
+                          {isSelected && <CheckCircle2 className="w-4 h-4 text-white shrink-0" />}
                         </div>
-                        <span className="text-emerald-700 font-bold mt-1">
+                        <span className={`font-black mt-1.5 text-xs ${isSelected ? 'text-emerald-100' : 'text-emerald-700 dark:text-emerald-400'}`}>
                           ₹{cat.rate_per_kg}/{cat.unit}
                         </span>
                       </div>
@@ -667,9 +671,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onClose, preselected
               <div className="pt-3">
                 <button
                   type="submit"
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm py-3.5 px-4 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full py-4 px-5 rounded-2xl bg-gradient-to-r from-[#15803d] via-[#059669] to-[#047857] hover:from-[#126b34] hover:to-[#035e45] text-white font-black text-sm shadow-[6px_6px_20px_rgba(21,128,61,0.38),-4px_-4px_12px_rgba(255,255,255,0.9)] hover:scale-[1.01] active:scale-98 transition-all flex items-center justify-center gap-2 cursor-pointer border border-emerald-400/40"
                 >
-                  <CheckCircle2 className="w-5 h-5" />
+                  <CheckCircle2 className="w-5 h-5 text-white" />
                   <span>{t('confirm_booking_btn', 'Confirm & Schedule Pickup')}</span>
                 </button>
                 <p className="text-[11px] text-center text-slate-400 mt-2">

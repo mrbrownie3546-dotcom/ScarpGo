@@ -61,10 +61,10 @@ export const Header: React.FC = () => {
                     const el = document.getElementById('pickup-modal-trigger');
                     if (el) el.click();
                   }}
-                  className="bg-[#15803d] hover:bg-[#126b34] text-white font-bold text-xs sm:text-sm px-3.5 sm:px-4 py-2 rounded-lg shadow-xs hover:shadow transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+                  className="bg-gradient-to-r from-[#15803d] via-[#16a34a] to-[#047857] hover:from-[#126b34] hover:to-[#035e45] text-white font-black text-xs sm:text-sm px-4 sm:px-5 py-2.5 rounded-xl shadow-[0_6px_16px_rgba(21,128,61,0.38)] hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer shrink-0 border border-emerald-400/40 active:scale-95 ring-2 ring-emerald-500/20"
                 >
-                  <Truck className="w-4 h-4" />
-                  <span>{t('book_btn', 'Book')}</span>
+                  <Truck className="w-4 h-4 sm:w-5 sm:h-5 text-white animate-pulse" />
+                  <span>{t('book_btn', 'Book Pickup ⚡')}</span>
                 </button>
 
                 <button

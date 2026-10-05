@@ -17,6 +17,7 @@ import {
   ExternalLink,
   Loader2,
   Sparkles,
+  Bot,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -83,7 +84,7 @@ export const AiSupportDrawer: React.FC<AiSupportDrawerProps> = ({
     {
       id: 'msg-welcome',
       sender: 'bot',
-      text: 'Namaste! ScrapGo Support mein aapka swagat hai. Rates, booking ya pickup tracking - jo bhi poochna ho, main yahan hoon.',
+      text: 'Namaste! Main ScrapGo Smart AI Support Assistant hoon 🤖. Main aapke sawalon ko acche se samajhkar step-by-step madad kar sakta hoon.\n\nKripya neeche se koi option chunein ya apna sawal detail me likhein:',
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       showMainOptions: true,
     },
@@ -381,7 +382,36 @@ export const AiSupportDrawer: React.FC<AiSupportDrawerProps> = ({
       const match = query.match(/SG-\d{4}-\d{3,5}/i);
       const detectedBookingNum = match ? match[0].toUpperCase() : '';
 
-      if (detectedBookingNum) {
+      // Privacy & Security Guardrail Check (Never leak owner/admin personal details, keys, or private info)
+      const isPrivacySensitive =
+        lower.includes('owner') ||
+        lower.includes('malik') ||
+        lower.includes('maalik') ||
+        lower.includes('admin number') ||
+        lower.includes('admin phone') ||
+        lower.includes('private number') ||
+        lower.includes('personal number') ||
+        lower.includes('owner contact') ||
+        lower.includes('owner phone') ||
+        lower.includes('management number') ||
+        lower.includes('personal phone') ||
+        lower.includes('secret key') ||
+        lower.includes('password') ||
+        lower.includes('database') ||
+        lower.includes('credential') ||
+        lower.includes('ceo') ||
+        lower.includes('founder') ||
+        lower.includes('director') ||
+        lower.includes('private address') ||
+        lower.includes('personal email') ||
+        lower.includes('server') ||
+        lower.includes('api key') ||
+        lower.includes('firebase key') ||
+        lower.includes('system info');
+
+      if (isPrivacySensitive) {
+        botResponse = `🔒 **Security & Privacy Policy Notification:**\n\nSecurity and Privacy policy ke tehat main Owner, Management, ya Admin ki koi bhi personal private contact details (jaise personal phone number, private address, ya system credentials) share nahi kar sakta.\n\nAap kisi bhi query ya madad ke liye yahan **AI Chat Assistant** ya **Register Complaint / Raise Ticket** option ka istemaal kar sakte hain.`;
+      } else if (detectedBookingNum) {
         const found = aiBotLookupBooking(detectedBookingNum);
         if (found) {
           actionType = 'track';
@@ -423,7 +453,7 @@ export const AiSupportDrawer: React.FC<AiSupportDrawerProps> = ({
         botResponse = `📍 **ScrapGo Active Service Areas:**\n\n• Delhi NCR (Noida, Gurgaon, Ghaziabad, Faridabad)\n• Jaipur, Chandigarh, Lucknow & expanding!\n\nApna pincode check karne ke liye home screen par area selector dekhein.`;
       } else if (lower.includes('contact') || lower.includes('helpline') || lower.includes('phone') || lower.includes('call') || lower.includes('number')) {
         actionType = 'call';
-        botResponse = `📞 **ScrapGo Support & Helpline Details:**\n\n• **Customer Helpline**: +91 82872 14705\n• **WhatsApp Support**: Available 24/7\n• **Email**: support@scrapgo.in\n• **Working Hours**: Mon-Sun (8:00 AM - 8:00 PM)`;
+        botResponse = `💬 **ScrapGo Support & Contact Options:**\n\n• **Instant AI Chat Assistant**: Available 24/7 directly in app\n• **Formal Ticket / Complaint**: Use 'File Complaint' tab above\n• **Official Email**: support@scrapgo.in\n• **Working Hours**: Mon-Sun (8:00 AM - 8:00 PM)`;
       } else if (lower.includes('payout') || lower.includes('payment') || lower.includes('paise')) {
         botResponse = `💰 **ScrapGo Payout Policy:**\n\n• **Zero Pickup Fee**: Pickup bilkul FREE hai!\n• **Instant Payment**: Weight hotey hi instant **UPI (GPay/PhonePe)**, **Cash**, ya **Direct Bank Transfer** milti hai.`;
       } else if (lower.includes('otp')) {
@@ -496,39 +526,45 @@ export const AiSupportDrawer: React.FC<AiSupportDrawerProps> = ({
     <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-end animate-in fade-in duration-200">
       <div className="bg-slate-50 w-full max-w-md h-full flex flex-col shadow-2xl border-l border-slate-200 animate-in slide-in-from-right duration-300">
         
-        {/* Header matching screenshot exactly */}
-        <div className="bg-[#0f6233] text-white p-4 flex items-center justify-between shadow-md">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-[#13733e] flex items-center justify-center text-white shadow-xs shrink-0">
-              <Headphones className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="font-extrabold text-base tracking-wide text-white leading-snug">
-                ScrapGo Support
-              </h3>
-              <div className="flex items-center gap-1.5 text-xs text-emerald-100 font-medium mt-0.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span>Online - turant jawab</span>
+        {/* Executive Header Banner */}
+        <div className="bg-gradient-to-r from-slate-900 via-emerald-950 to-slate-900 text-white p-4.5 relative overflow-hidden shadow-lg border-b border-emerald-900/50">
+          <div className="absolute -top-10 -right-10 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none"></div>
+
+          <div className="relative z-10 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="relative w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30 shadow-inner shrink-0">
+                <Bot className="w-5.5 h-5.5 text-emerald-300" />
+                <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 border-2 border-slate-900"></span>
+              </div>
+
+              <div>
+                <h3 className="font-extrabold text-base tracking-tight text-white leading-snug flex items-center gap-2">
+                  <span>ScrapGo Support Assistant</span>
+                </h3>
+                <p className="text-[11px] text-emerald-200/90 font-medium mt-0.5 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <span>Active 24/7 • Instant Help &amp; Support</span>
+                </p>
               </div>
             </div>
-          </div>
 
-          <button
-            onClick={onClose}
-            className="w-9 h-9 rounded-2xl bg-[#13733e] hover:bg-[#188849] flex items-center justify-center text-white cursor-pointer transition-colors"
-            title="Close Support"
-          >
-            <X className="w-5 h-5" />
-          </button>
+            <button
+              onClick={onClose}
+              className="w-9 h-9 rounded-2xl bg-white/10 hover:bg-white/20 active:scale-90 flex items-center justify-center text-slate-300 hover:text-white cursor-pointer transition-all border border-white/10"
+              title="Close Support"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
-        {/* Navigation Sub-Tabs */}
-        <div className="flex border-b border-slate-200 bg-white px-2 py-1.5 gap-1 text-xs">
+        {/* Smooth Glass Segmented Navigation Sub-Tabs */}
+        <div className="flex border-b border-slate-200/80 bg-white p-1.5 gap-1.5 text-xs font-extrabold">
           <button
             onClick={() => handleTabSwitch('chat')}
-            className={`flex-1 py-1.5 font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`flex-1 py-2 font-extrabold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
               activeTab === 'chat'
-                ? 'bg-[#0f6233] text-white shadow-2xs'
+                ? 'bg-emerald-700 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
@@ -538,26 +574,26 @@ export const AiSupportDrawer: React.FC<AiSupportDrawerProps> = ({
 
           <button
             onClick={() => handleTabSwitch('complaint')}
-            className={`flex-1 py-1.5 font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`flex-1 py-2 font-extrabold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
               activeTab === 'complaint'
-                ? 'bg-rose-600 text-white shadow-2xs'
+                ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
-            <FileWarning className="w-3.5 h-3.5" />
+            <FileWarning className="w-3.5 h-3.5 text-rose-500" />
             <span>File Complaint</span>
           </button>
 
           <button
             onClick={() => handleTabSwitch('history')}
-            className={`flex-1 py-1.5 font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`flex-1 py-2 font-extrabold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
               activeTab === 'history'
-                ? 'bg-blue-600 text-white shadow-2xs'
+                ? 'bg-slate-900 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
-            <Clock className="w-3.5 h-3.5" />
-            <span>My Tickets ({myTickets.length})</span>
+            <Clock className="w-3.5 h-3.5 text-emerald-500" />
+            <span>Tickets ({myTickets.length})</span>
           </button>
         </div>
 
@@ -700,58 +736,73 @@ export const AiSupportDrawer: React.FC<AiSupportDrawerProps> = ({
                       </div>
                     )}
 
-                    {/* Quick Pill Buttons directly under greeting / responses matching screenshot */}
+                    {/* Interactive Main Option Cards Grid - Clean 2-Column Grid instead of cluttered pile */}
                     {m.showMainOptions && complaintStep === 'idle' && (
-                      <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap gap-2">
-                        <button
-                          onClick={() => handleSend('What are today scrap rates?')}
-                          className="border-2 border-[#0f6233] text-[#0f6233] bg-white hover:bg-emerald-50 font-extrabold px-3.5 py-2 rounded-full text-xs transition-all active:scale-95 cursor-pointer shadow-2xs"
-                        >
-                          Aaj ke rates
-                        </button>
-                        <button
-                          onClick={() => handleSend('Track my pickup order')}
-                          className="border-2 border-[#0f6233] text-[#0f6233] bg-white hover:bg-emerald-50 font-extrabold px-3.5 py-2 rounded-full text-xs transition-all active:scale-95 cursor-pointer shadow-2xs"
-                        >
-                          Pickup track karein
-                        </button>
-                        <button
-                          onClick={() => handleSend('How to book new pickup?')}
-                          className="border-2 border-[#0f6233] text-[#0f6233] bg-white hover:bg-emerald-50 font-extrabold px-3.5 py-2 rounded-full text-xs transition-all active:scale-95 cursor-pointer shadow-2xs"
-                        >
-                          Nayi booking
-                        </button>
-                        <button
-                          onClick={() => window.open('https://wa.me/918287214705', '_blank')}
-                          className="border-2 border-[#0f6233] text-[#0f6233] bg-white hover:bg-emerald-50 font-extrabold px-3.5 py-2 rounded-full text-xs transition-all active:scale-95 cursor-pointer shadow-2xs flex items-center gap-1"
-                        >
-                          <span>WhatsApp par baat karein</span>
-                        </button>
-                        <button
-                          onClick={startComplaintFlow}
-                          className="border-2 border-rose-600 text-rose-700 bg-white hover:bg-rose-50 font-extrabold px-3.5 py-2 rounded-full text-xs transition-all active:scale-95 cursor-pointer shadow-2xs flex items-center gap-1"
-                        >
-                          <FileWarning className="w-3.5 h-3.5 text-rose-600" />
-                          <span>Shikayat / Complaint</span>
-                        </button>
-                        <button
-                          onClick={() => handleSend('What items do you accept?')}
-                          className="border-2 border-[#0f6233] text-[#0f6233] bg-white hover:bg-emerald-50 font-extrabold px-3.5 py-2 rounded-full text-xs transition-all active:scale-95 cursor-pointer shadow-2xs"
-                        >
-                          Accepted items
-                        </button>
-                        <button
-                          onClick={() => handleSend('Tell me payment policy')}
-                          className="border-2 border-[#0f6233] text-[#0f6233] bg-white hover:bg-emerald-50 font-extrabold px-3.5 py-2 rounded-full text-xs transition-all active:scale-95 cursor-pointer shadow-2xs"
-                        >
-                          Payment policy
-                        </button>
-                        <button
-                          onClick={() => handleSend('What is secret pickup OTP?')}
-                          className="border-2 border-[#0f6233] text-[#0f6233] bg-white hover:bg-emerald-50 font-extrabold px-3.5 py-2 rounded-full text-xs transition-all active:scale-95 cursor-pointer shadow-2xs"
-                        >
-                          Secret OTP info
-                        </button>
+                      <div className="mt-3 pt-3 border-t border-slate-100/80">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-2">
+                          ⚡ Choose a Topic or Ask Anything:
+                        </span>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={() => handleSend('What are today scrap rates?')}
+                            className="bg-emerald-50/80 hover:bg-emerald-100 text-emerald-950 border border-emerald-200/80 p-2.5 rounded-xl text-left transition-all active:scale-98 cursor-pointer flex flex-col gap-0.5 shadow-2xs"
+                          >
+                            <span className="font-extrabold text-xs text-emerald-900 flex items-center gap-1">
+                              📊 Today's Rates
+                            </span>
+                            <span className="text-[10px] text-emerald-700/90 font-medium">Daily scrap prices</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleSend('Track my pickup order')}
+                            className="bg-slate-50 hover:bg-slate-100 text-slate-900 border border-slate-200/80 p-2.5 rounded-xl text-left transition-all active:scale-98 cursor-pointer flex flex-col gap-0.5 shadow-2xs"
+                          >
+                            <span className="font-extrabold text-xs text-slate-900 flex items-center gap-1">
+                              🚚 Track Order
+                            </span>
+                            <span className="text-[10px] text-slate-500 font-medium">Live driver status</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleSend('How to book new pickup?')}
+                            className="bg-slate-50 hover:bg-slate-100 text-slate-900 border border-slate-200/80 p-2.5 rounded-xl text-left transition-all active:scale-98 cursor-pointer flex flex-col gap-0.5 shadow-2xs"
+                          >
+                            <span className="font-extrabold text-xs text-slate-900 flex items-center gap-1">
+                              📅 Nayi Booking
+                            </span>
+                            <span className="text-[10px] text-slate-500 font-medium">Free doorstep pickup</span>
+                          </button>
+
+                          <button
+                            onClick={startComplaintFlow}
+                            className="bg-rose-50/80 hover:bg-rose-100 text-rose-950 border border-rose-200/80 p-2.5 rounded-xl text-left transition-all active:scale-98 cursor-pointer flex flex-col gap-0.5 shadow-2xs"
+                          >
+                            <span className="font-extrabold text-xs text-rose-900 flex items-center gap-1">
+                              🚨 Complaint / Issue
+                            </span>
+                            <span className="text-[10px] text-rose-700/90 font-medium">Direct admin ticket</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleSend('What items do you accept?')}
+                            className="bg-slate-50 hover:bg-slate-100 text-slate-900 border border-slate-200/80 p-2.5 rounded-xl text-left transition-all active:scale-98 cursor-pointer flex flex-col gap-0.5 shadow-2xs"
+                          >
+                            <span className="font-extrabold text-xs text-slate-900 flex items-center gap-1">
+                              📦 Accepted Items
+                            </span>
+                            <span className="text-[10px] text-slate-500 font-medium">Scrap materials list</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleSend('Tell me digital scale policy')}
+                            className="bg-slate-50 hover:bg-slate-100 text-slate-900 border border-slate-200/80 p-2.5 rounded-xl text-left transition-all active:scale-98 cursor-pointer flex flex-col gap-0.5 shadow-2xs"
+                          >
+                            <span className="font-extrabold text-xs text-slate-900 flex items-center gap-1">
+                              ⚖️ Digital Scale Policy
+                            </span>
+                            <span className="text-[10px] text-slate-500 font-medium">100% verified weight</span>
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>

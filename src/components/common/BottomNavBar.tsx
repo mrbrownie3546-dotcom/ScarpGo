@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Home, IndianRupee, Truck, MessageCircle, User } from 'lucide-react';
+import React from 'react';
+import { Home, Truck, MessageCircle, User } from 'lucide-react';
 import { useScrap } from '../../context/ScrapContext';
+import { useKeyboardStatus } from '../../hooks/useKeyboardStatus';
 
 interface BottomNavBarProps {
   onOpenBooking: () => void;
@@ -20,106 +21,14 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
   isSearchFocused = false,
 }) => {
   const { currentUser, tickets, activePortal, isOverlayActive, t } = useScrap();
+  const isKeyboardVisible = useKeyboardStatus();
 
-  const [isInputFocused, setIsInputFocused] = useState(false);
-  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
-
-  // Helper to check if an element is a form input or editable field
-  const isInputElement = (el: Element | null): boolean => {
-    if (!el) return false;
-    const tagName = el.tagName;
-    return (
-      tagName === 'INPUT' ||
-      tagName === 'TEXTAREA' ||
-      tagName === 'SELECT' ||
-      (el as HTMLElement).isContentEditable
-    );
-  };
-
-  // 1. Detect global input/textarea/select focus & blur events
-  useEffect(() => {
-    const handleFocus = (e: Event) => {
-      const target = e.target as HTMLElement | null;
-      if (isInputElement(target)) {
-        setIsInputFocused(true);
-      }
-    };
-
-    const handleBlur = () => {
-      // Delay check slightly to handle focus switching between inputs
-      setTimeout(() => {
-        const active = document.activeElement;
-        if (!isInputElement(active)) {
-          setIsInputFocused(false);
-        }
-      }, 60);
-    };
-
-    window.addEventListener('focusin', handleFocus);
-    window.addEventListener('focusout', handleBlur);
-    window.addEventListener('focus', handleFocus, true);
-    window.addEventListener('blur', handleBlur, true);
-
-    return () => {
-      window.removeEventListener('focusin', handleFocus);
-      window.removeEventListener('focusout', handleBlur);
-      window.removeEventListener('focus', handleFocus, true);
-      window.removeEventListener('blur', handleBlur, true);
-    };
-  }, []);
-
-  // 2. Detect virtual mobile keyboard via window.visualViewport & window resize events
-  useEffect(() => {
-    const checkKeyboardVisibility = () => {
-      // Check activeElement first
-      const active = document.activeElement;
-      if (isInputElement(active)) {
-        setIsKeyboardOpen(true);
-        return;
-      }
-
-      if (window.visualViewport) {
-        const viewportHeight = window.visualViewport.height;
-        const windowHeight = window.innerHeight;
-        const heightDifference = windowHeight - viewportHeight;
-        const heightRatio = viewportHeight / windowHeight;
-
-        // Virtual mobile keyboard typically reduces visualViewport height by >= 15% or 80px
-        const keyboardActive = heightRatio < 0.85 || heightDifference > 80;
-        setIsKeyboardOpen(keyboardActive);
-      } else {
-        setIsKeyboardOpen(false);
-      }
-    };
-
-    const viewport = window.visualViewport;
-    if (viewport) {
-      viewport.addEventListener('resize', checkKeyboardVisibility);
-      viewport.addEventListener('scroll', checkKeyboardVisibility);
-    }
-    window.addEventListener('resize', checkKeyboardVisibility);
-    window.addEventListener('orientationchange', checkKeyboardVisibility);
-
-    // Run initial check
-    checkKeyboardVisibility();
-
-    return () => {
-      if (viewport) {
-        viewport.removeEventListener('resize', checkKeyboardVisibility);
-        viewport.removeEventListener('scroll', checkKeyboardVisibility);
-      }
-      window.removeEventListener('resize', checkKeyboardVisibility);
-      window.removeEventListener('orientationchange', checkKeyboardVisibility);
-    };
-  }, []);
-
-  // ONLY render on customer home page, and hide whenever any modal/drawer is open, input/search is focused, or keyboard is open
+  // ONLY render on customer home page, and hide whenever any modal/drawer is open or keyboard is open on screen
   const isHidden =
     activePortal !== 'customer' ||
     isOverlayActive ||
     isSearchFocused ||
-    isInputFocused ||
-    isKeyboardOpen;
+    isKeyboardVisible;
 
   if (isHidden) {
     return null;
@@ -173,12 +82,12 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
         {/* 3. BOOK BUTTON (Prominent Elevated Center Button) */}
         <button
           onClick={onOpenBooking}
-          className="flex flex-col items-center gap-1 -mt-5 group transition-transform active:scale-95"
+          className="flex flex-col items-center gap-1 -mt-6 group transition-transform active:scale-95 relative"
         >
-          <div className="w-13 h-13 rounded-2xl bg-[#15803d] text-white flex items-center justify-center shadow-lg shadow-emerald-800/40 border-2 border-white group-hover:bg-[#126b34] group-hover:scale-105 transition-all">
-            <Truck className="w-6 h-6 animate-pulse-subtle" />
+          <div className="w-15 h-15 rounded-2xl bg-gradient-to-tr from-[#15803d] via-[#16a34a] to-[#047857] text-white flex items-center justify-center shadow-[0_12px_25px_rgba(21,128,61,0.5)] border-2 border-white ring-4 ring-emerald-500/30 group-hover:scale-110 transition-all">
+            <Truck className="w-7 h-7 text-white animate-pulse-subtle" />
           </div>
-          <span className="text-[11px] font-black text-emerald-800 tracking-tight">
+          <span className="text-[11px] font-black text-emerald-800 tracking-tight uppercase">
             {t('nav_book', 'Book')}
           </span>
         </button>

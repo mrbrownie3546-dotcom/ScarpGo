@@ -39,6 +39,7 @@ import {
   ThumbsUp,
   ThumbsDown,
   MessageCircle,
+  X,
 } from 'lucide-react';
 import { BookingModal } from './BookingModal';
 import { LiveTrackingModal } from './LiveTrackingModal';
@@ -46,6 +47,7 @@ import { AiSupportDrawer } from './AiSupportDrawer';
 import { BottomNavBar } from '../common/BottomNavBar';
 import { AuthModal } from '../common/AuthModal';
 import { CustomerAccountModal } from './CustomerAccountModal';
+import { useKeyboardStatus } from '../../hooks/useKeyboardStatus';
 
 export const CustomerHome: React.FC = () => {
   const {
@@ -59,6 +61,8 @@ export const CustomerHome: React.FC = () => {
     getCategoryDesc,
     getStatusLabel,
   } = useScrap();
+
+  const isKeyboardVisible = useKeyboardStatus();
 
   // Modals & Drawers state
   const [showBookingModal, setShowBookingModal] = useState(false);
@@ -85,6 +89,24 @@ export const CustomerHome: React.FC = () => {
 
   // Copy OTP state
   const [copiedOtpBookingId, setCopiedOtpBookingId] = useState<string | null>(null);
+
+  // Rotating Animated Titles List for Hero Section (No ISO mention)
+  const heroTitles = [
+    { line1: 'Less hassle.', line2: 'More done.' },
+    { line1: 'Ghar Baithe Kabaad Bechein.', line2: 'Instant UPI Cash Paayein.' },
+    { line1: 'Sell Scrap Online.', line2: 'Best Daily Market Rates.' },
+    { line1: 'Recycle Old Appliances.', line2: 'Save The Environment.' },
+    { line1: 'Zero Pickup Charges.', line2: 'Fast Doorstep Service.' },
+  ];
+
+  const [currentTitleIndex, setCurrentTitleIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTitleIndex((prev) => (prev + 1) % heroTitles.length);
+    }, 3200);
+    return () => clearInterval(timer);
+  }, [heroTitles.length]);
 
   // Strict Customer Login Check
   const isCustomerLoggedIn = Boolean(
@@ -279,36 +301,48 @@ export const CustomerHome: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 pb-28 transition-colors">
-      {/* HERO BANNER SECTION */}
-      <section className="relative bg-gradient-to-br from-emerald-900 via-slate-900 to-teal-950 text-white overflow-hidden pt-8 pb-14 px-4 sm:px-6 lg:px-8 border-b border-emerald-900/50">
-        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:16px_16px]"></div>
+      {/* HERO BANNER SECTION (Bright, Light, Soft Neumorphic Style) */}
+      <section className="relative bg-gradient-to-br from-[#ebf2fa] via-[#f4f7fb] to-[#e6eef7] dark:from-slate-900 dark:via-slate-950 dark:to-slate-900 text-slate-900 dark:text-white overflow-hidden pt-8 pb-14 px-4 sm:px-6 lg:px-8 border-b border-slate-200/80 dark:border-slate-800">
+        <div className="absolute inset-0 opacity-25 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] dark:bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:18px_18px]"></div>
         <div className="max-w-7xl mx-auto relative z-10">
           <div className="grid lg:grid-cols-12 gap-8 items-center">
             {/* Left Content */}
             <div className="lg:col-span-6 space-y-6 text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-bold backdrop-blur-xs">
-                <Sparkles className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-100/90 dark:bg-emerald-950/80 border border-emerald-300/80 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-black shadow-[3px_3px_8px_rgba(166,180,200,0.3),-3px_-3px_8px_rgba(255,255,255,0.95)]">
+                <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400 animate-pulse" />
                 <span>YOUR EVERYDAY RECYCLING TOOLKIT</span>
               </div>
 
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight text-white">
-                Less hassle. <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-green-400">
-                  More done.
-                </span>
-              </h1>
+              <div className="min-h-[130px] sm:min-h-[150px] flex items-center justify-center lg:justify-start overflow-hidden">
+                <AnimatePresence mode="wait">
+                  <motion.h1
+                    key={currentTitleIndex}
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -15 }}
+                    transition={{ duration: 0.45, ease: 'easeOut' }}
+                    className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight text-slate-900 dark:text-white text-center lg:text-left"
+                  >
+                    <span className="block">{heroTitles[currentTitleIndex].line1}</span>
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#15803d] via-[#059669] to-[#0d9488] block">
+                      {heroTitles[currentTitleIndex].line2}
+                    </span>
+                  </motion.h1>
+                </AnimatePresence>
+              </div>
 
-              <p className="text-slate-300 text-sm sm:text-base max-w-xl leading-relaxed mx-auto lg:mx-0">
-                Doorstep scrap pickup with ISO certified digital weighing, transparent daily market rates, and instant UPI or Cash payouts.
+              <p className="text-slate-600 dark:text-slate-300 text-sm sm:text-base max-w-xl leading-relaxed mx-auto lg:mx-0 font-medium">
+                Doorstep scrap pickup with certified digital weighing, transparent daily market rates, and instant UPI or Cash payouts.
               </p>
 
-              {/* Action Buttons */}
-              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3.5 pt-2">
+              {/* Action Buttons (Enlarged & Prominent) */}
+              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-2">
                 <button
+                  id="pickup-modal-trigger"
                   onClick={() => handleOpenBooking()}
-                  className="px-6 py-3.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 active:scale-98 text-slate-950 font-black text-sm shadow-xl shadow-emerald-500/25 flex items-center gap-2.5 transition-all cursor-pointer"
+                  className="w-full sm:w-auto px-8 sm:px-10 py-4.5 sm:py-5 rounded-2xl bg-gradient-to-r from-[#15803d] via-[#16a34a] to-[#047857] hover:from-[#126b34] hover:to-[#035e45] text-white font-black text-base sm:text-lg shadow-[0_12px_28px_rgba(21,128,61,0.45),-4px_-4px_14px_rgba(255,255,255,0.95)] hover:scale-105 active:scale-95 transition-all cursor-pointer border-2 border-emerald-300/60 flex items-center justify-center gap-3.5 group"
                 >
-                  <Truck className="w-5 h-5 text-slate-950" />
+                  <Truck className="w-7 h-7 text-white group-hover:rotate-12 transition-transform shrink-0" />
                   <span>Explore Doorstep Pickup →</span>
                 </button>
 
@@ -317,25 +351,25 @@ export const CustomerHome: React.FC = () => {
                     const el = document.getElementById('rates-section');
                     el?.scrollIntoView({ behavior: 'smooth' });
                   }}
-                  className="px-5 py-3.5 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700 text-slate-200 font-bold text-sm flex items-center gap-2 transition-all cursor-pointer"
+                  className="w-full sm:w-auto px-8 sm:px-10 py-4.5 sm:py-5 rounded-2xl bg-[#f4f7fb] dark:bg-slate-800 hover:bg-white dark:hover:bg-slate-700 border-2 border-white/90 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-black text-base sm:text-lg shadow-[6px_6px_20px_rgba(166,180,200,0.32),-6px_-6px_20px_rgba(255,255,255,0.95)] hover:text-emerald-700 hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-3"
                 >
-                  <Calculator className="w-4 h-4 text-emerald-400" />
+                  <Calculator className="w-6 h-6 text-emerald-600 dark:text-emerald-400 shrink-0" />
                   <span>Check Today's Rates</span>
                 </button>
               </div>
 
               {/* Trust Badges */}
-              <div className="pt-4 grid grid-cols-3 gap-3 border-t border-slate-800/80 max-w-lg mx-auto lg:mx-0">
-                <div className="flex items-center gap-2 text-xs text-slate-300">
-                  <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+              <div className="pt-4 grid grid-cols-3 gap-3 border-t border-slate-200/80 dark:border-slate-800 max-w-lg mx-auto lg:mx-0">
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                   <span>Digital Scale Verified</span>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-slate-300">
-                  <Zap className="w-4 h-4 text-amber-400 shrink-0" />
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <Zap className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
                   <span>Instant UPI Transfer</span>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-slate-300">
-                  <CheckCircle2 className="w-4 h-4 text-teal-400 shrink-0" />
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <CheckCircle2 className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0" />
                   <span>Zero Pickup Fee</span>
                 </div>
               </div>
@@ -355,12 +389,8 @@ export const CustomerHome: React.FC = () => {
                 <Sparkles className="w-8 h-8 drop-shadow-[0_0_10px_rgba(16,185,129,0.8)]" />
               </motion.div>
 
-              {/* FLOATING ANIMATED 3D NEUMORPHIC APP WINDOW CARD */}
-              <motion.div
-                animate={{ y: [0, -10, 0], rotate: [0, 1.2, -1.2, 0] }}
-                transition={{ repeat: Infinity, duration: 6, ease: 'easeInOut' }}
-                className="bg-[#f4f7fb] text-slate-900 rounded-3xl p-5 sm:p-6 shadow-[12px_12px_30px_rgba(0,0,0,0.35),-6px_-6px_20px_rgba(255,255,255,0.15)] border-2 border-white/60 relative z-10 space-y-4"
-              >
+              {/* SOLID STATIC 3D NEUMORPHIC APP WINDOW CARD */}
+              <div className="bg-[#f4f7fb] dark:bg-slate-900 text-slate-900 dark:text-white rounded-3xl p-5 sm:p-6 shadow-[12px_12px_30px_rgba(166,180,200,0.35),-6px_-6px_20px_rgba(255,255,255,0.95)] dark:shadow-none border-2 border-white/90 dark:border-slate-800 relative z-10 space-y-4">
                 {/* Window Bar Header */}
                 <div className="flex items-center justify-between border-b border-slate-200/80 pb-3">
                   <div className="flex items-center gap-2">
@@ -389,7 +419,7 @@ export const CustomerHome: React.FC = () => {
                       <ShieldCheck className="w-5 h-5" />
                     </div>
                     <div>
-                      <strong className="text-xs font-black text-slate-900 block">ISO Scale Verified</strong>
+                      <strong className="text-xs font-black text-slate-900 block">Certified Scale</strong>
                       <span className="text-[10px] text-slate-500 block font-medium mt-0.5">0.00 kg Live Tare</span>
                     </div>
                   </motion.button>
@@ -463,7 +493,7 @@ export const CustomerHome: React.FC = () => {
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
-              </motion.div>
+              </div>
             </div>
           </div>
         </div>
@@ -531,52 +561,45 @@ export const CustomerHome: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* SCRAP CATEGORIES & TODAY'S RATES SECTION */}
-      <section id="rates-section" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
-          <div>
-            <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-1">
-              <TrendingUp className="w-4 h-4" />
-              <span>Verified Market Rate Card</span>
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white leading-tight">
-              Today's Scrap Buying Rates <span className="whitespace-nowrap text-emerald-600 dark:text-emerald-400 text-xl sm:text-2xl">(₹/kg)</span>
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Updated daily based on regional mandi market indexes. No hidden deductions!
-            </p>
+      {/* SCRAP CATEGORIES & TODAY'S RATES SECTION (Clean Minimalist Design) */}
+      <section id="rates-section" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
+        {/* Compact Search & Category Filter Bar */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs">
+          <div className="flex items-center gap-2 text-slate-800 dark:text-white font-extrabold text-sm pl-1">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+            <span>Live Scrap Rates</span>
           </div>
 
           {/* Search Box */}
-          <div className="relative w-full md:w-72">
+          <div className="relative w-full sm:w-72">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search newspaper, iron, AC..."
+              placeholder="Search newspaper, iron, AC, copper..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs sm:text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
+              className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3 py-2 text-xs font-medium text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
           </div>
         </div>
 
-        {/* Category Type Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+        {/* Category Type Filter Pills */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none text-xs">
           {[
             { id: 'all', label: 'All Categories' },
-            { id: 'paper', label: '📄 Paper & Books' },
-            { id: 'metal', label: '⚙️ Metals' },
-            { id: 'plastic', label: '🥤 Plastics' },
-            { id: 'e-waste', label: '💻 E-Waste' },
-            { id: 'appliance', label: '🔌 Appliances' },
-            { id: 'vehicle', label: '🚗 Vehicles' },
+            { id: 'paper', label: 'Paper & Books' },
+            { id: 'metal', label: 'Metals' },
+            { id: 'plastic', label: 'Plastics' },
+            { id: 'e-waste', label: 'E-Waste' },
+            { id: 'appliance', label: 'Appliances' },
+            { id: 'vehicle', label: 'Vehicles' },
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setSelectedTypeFilter(tab.id)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                 selectedTypeFilter === tab.id
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
+                  ? 'bg-emerald-600 text-white shadow-2xs'
                   : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:border-emerald-500/50'
               }`}
             >
@@ -585,52 +608,43 @@ export const CustomerHome: React.FC = () => {
           ))}
         </div>
 
-        {/* Category Rate Cards Grid */}
+        {/* Category Rate Cards Grid (Clean Layout Without Heavy Icon Boxes) */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredCategories.map((cat) => (
             <div
               key={cat.id}
-              className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800/90 shadow-sm hover:shadow-xl hover:border-emerald-500/50 transition-all flex flex-col justify-between group"
+              className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 border border-slate-200/90 dark:border-slate-800/90 shadow-[4px_4px_15px_rgba(166,180,200,0.18)] hover:shadow-lg hover:border-emerald-500/50 transition-all flex flex-col justify-between group"
             >
-              <div className="space-y-3">
-                <div className="flex items-start justify-between">
-                  <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xl font-bold group-hover:scale-105 transition-transform">
-                    {cat.category_type === 'paper' && '📄'}
-                    {cat.category_type === 'metal' && '⚙️'}
-                    {cat.category_type === 'plastic' && '🥤'}
-                    {cat.category_type === 'e-waste' && '💻'}
-                    {cat.category_type === 'appliance' && '🔌'}
-                    {cat.category_type === 'vehicle' && '🚗'}
-                  </div>
+              <div className="space-y-2.5">
+                {/* Clean Top Header Row: Item Name Left, Rate Right */}
+                <div className="flex items-start justify-between gap-2 border-b border-slate-100 dark:border-slate-800/80 pb-2.5">
+                  <h3 className="font-extrabold text-slate-900 dark:text-white text-base group-hover:text-emerald-600 transition-colors leading-snug">
+                    {getCategoryName(cat)}
+                  </h3>
 
-                  <div className="text-right">
-                    <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                  <div className="text-right shrink-0">
+                    <span className="text-xl font-black text-emerald-600 dark:text-emerald-400">
                       ₹{cat.rate_per_kg}
                     </span>
-                    <span className="text-xs text-slate-400 font-bold block">
+                    <span className="text-[10px] text-slate-400 font-extrabold block uppercase tracking-wider">
                       per {cat.unit}
                     </span>
                   </div>
                 </div>
 
-                <div>
-                  <h3 className="font-bold text-slate-900 dark:text-white text-base group-hover:text-emerald-600 transition-colors">
-                    {getCategoryName(cat)}
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed">
-                    {getCategoryDesc(cat)}
-                  </p>
-                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium line-clamp-2">
+                  {getCategoryDesc(cat)}
+                </p>
               </div>
 
-              <div className="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-slate-400">
+              <div className="pt-3 mt-3 border-t border-slate-100/80 dark:border-slate-800/80 flex items-center justify-between">
+                <span className="text-[11px] font-bold text-slate-400">
                   Min {cat.min_weight_kg || 10} {cat.unit}
                 </span>
 
                 <button
                   onClick={() => handleOpenBooking(cat.id)}
-                  className="px-3.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950 hover:bg-emerald-500 hover:text-white text-emerald-700 dark:text-emerald-400 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950 hover:bg-emerald-600 hover:text-white text-emerald-700 dark:text-emerald-400 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer active:scale-95 shadow-2xs"
                 >
                   <span>Sell This</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -641,17 +655,17 @@ export const CustomerHome: React.FC = () => {
         </div>
       </section>
 
-      {/* HOW IT WORKS SECTION */}
-      <section className="bg-slate-900 text-white py-14 my-10 border-y border-slate-800">
+      {/* HOW IT WORKS SECTION (Light Modern Neumorphic Theme) */}
+      <section className="bg-[#f0f4f9] dark:bg-slate-900 text-slate-900 dark:text-white py-14 my-10 border-y border-slate-200/80 dark:border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
           <div className="text-center max-w-2xl mx-auto space-y-2">
-            <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest">
+            <span className="text-xs font-extrabold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest bg-emerald-100/80 dark:bg-emerald-950 px-3.5 py-1 rounded-full border border-emerald-300/60 dark:border-emerald-800">
               Simple 4-Step Process
             </span>
-            <h2 className="text-2xl sm:text-3xl font-black">
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
               How SCRAPGO Doorstep Pickup Works
             </h2>
-            <p className="text-slate-400 text-xs sm:text-sm">
+            <p className="text-slate-600 dark:text-slate-400 text-xs sm:text-sm font-medium">
               Hassle-free recycling right from your home, apartment, or office.
             </p>
           </div>
@@ -685,16 +699,16 @@ export const CustomerHome: React.FC = () => {
             ].map((s) => {
               const Icon = s.icon;
               return (
-                <div key={s.step} className="bg-slate-800/80 rounded-2xl p-6 border border-slate-700 space-y-4 relative">
+                <div key={s.step} className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200/90 dark:border-slate-700 shadow-[6px_6px_20px_rgba(166,180,200,0.25)] space-y-4 relative hover:scale-102 transition-transform">
                   <div className="flex items-center justify-between">
-                    <div className="w-12 h-12 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
+                    <div className="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 flex items-center justify-center border border-emerald-200 dark:border-emerald-700 shadow-2xs">
                       <Icon className="w-6 h-6" />
                     </div>
-                    <span className="font-mono font-black text-2xl text-slate-600">{s.step}</span>
+                    <span className="font-mono font-black text-2xl text-slate-300 dark:text-slate-600">{s.step}</span>
                   </div>
                   <div>
-                    <h3 className="font-bold text-white text-base">{s.title}</h3>
-                    <p className="text-xs text-slate-400 mt-1 leading-relaxed">{s.desc}</p>
+                    <h3 className="font-bold text-slate-900 dark:text-white text-base">{s.title}</h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed font-medium">{s.desc}</p>
                   </div>
                 </div>
               );
@@ -703,24 +717,24 @@ export const CustomerHome: React.FC = () => {
         </div>
       </section>
 
-      {/* GREEN ENVIRONMENTAL IMPACT CALCULATOR */}
+      {/* GREEN ENVIRONMENTAL IMPACT CALCULATOR (Light Vibrant Theme) */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-gradient-to-r from-emerald-900 to-teal-900 rounded-3xl p-6 sm:p-10 text-white shadow-2xl relative overflow-hidden border border-emerald-500/30">
+        <div className="bg-gradient-to-br from-[#ebf5ee] via-[#f2faf4] to-[#e4f4ea] dark:from-slate-900 dark:via-slate-950 dark:to-slate-900 rounded-3xl p-6 sm:p-10 text-slate-900 dark:text-white shadow-xl relative overflow-hidden border border-emerald-200/80 dark:border-slate-800">
           <div className="grid lg:grid-cols-12 gap-8 items-center relative z-10">
             <div className="lg:col-span-6 space-y-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold">
-                <Leaf className="w-4 h-4 text-emerald-400" />
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-600/10 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 text-xs font-extrabold border border-emerald-300/60 dark:border-emerald-700">
+                <Leaf className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 <span>Environmental Savings Meter</span>
               </div>
-              <h2 className="text-2xl sm:text-3xl font-black">
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
                 Your Recycling Makes a Real Difference 🌱
               </h2>
-              <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
+              <p className="text-slate-600 dark:text-slate-300 text-xs sm:text-sm leading-relaxed font-medium">
                 By selling scrap to certified recyclers instead of sending it to landfills, you help reduce carbon emissions and conserve natural resources.
               </p>
 
               <div className="pt-2">
-                <label className="text-xs font-bold text-slate-200 block mb-2">
+                <label className="text-xs font-extrabold text-slate-800 dark:text-slate-200 block mb-2">
                   Total Scrap Sold / Recycled ({ecoScrapKg} kg)
                 </label>
                 <input
@@ -730,25 +744,25 @@ export const CustomerHome: React.FC = () => {
                   step="10"
                   value={ecoScrapKg}
                   onChange={(e) => setEcoScrapKg(Number(e.target.value))}
-                  className="w-full accent-emerald-400 bg-slate-800 h-2.5 rounded-lg cursor-pointer"
+                  className="w-full accent-emerald-600 bg-slate-200 dark:bg-slate-800 h-2.5 rounded-lg cursor-pointer"
                 />
               </div>
             </div>
 
             <div className="lg:col-span-6 grid grid-cols-3 gap-3">
-              <div className="bg-slate-900/80 backdrop-blur-xs rounded-2xl p-4 border border-emerald-500/30 text-center space-y-1">
-                <div className="text-emerald-400 text-2xl sm:text-3xl font-black">{co2SavedKg} kg</div>
-                <div className="text-[11px] font-bold text-slate-300">CO₂ Emissions Saved</div>
+              <div className="bg-white/90 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl p-4 border border-emerald-200/80 dark:border-emerald-500/30 text-center space-y-1 shadow-xs">
+                <div className="text-emerald-700 dark:text-emerald-400 text-2xl sm:text-3xl font-black">{co2SavedKg} kg</div>
+                <div className="text-[11px] font-extrabold text-slate-700 dark:text-slate-300">CO₂ Emissions Saved</div>
               </div>
 
-              <div className="bg-slate-900/80 backdrop-blur-xs rounded-2xl p-4 border border-emerald-500/30 text-center space-y-1">
-                <div className="text-emerald-400 text-2xl sm:text-3xl font-black">{treesSaved}</div>
-                <div className="text-[11px] font-bold text-slate-300">Trees Preserved</div>
+              <div className="bg-white/90 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl p-4 border border-emerald-200/80 dark:border-emerald-500/30 text-center space-y-1 shadow-xs">
+                <div className="text-emerald-700 dark:text-emerald-400 text-2xl sm:text-3xl font-black">{treesSaved}</div>
+                <div className="text-[11px] font-extrabold text-slate-700 dark:text-slate-300">Trees Preserved</div>
               </div>
 
-              <div className="bg-slate-900/80 backdrop-blur-xs rounded-2xl p-4 border border-emerald-500/30 text-center space-y-1">
-                <div className="text-emerald-400 text-2xl sm:text-3xl font-black">{waterSavedLiters} L</div>
-                <div className="text-[11px] font-bold text-slate-300">Water Saved</div>
+              <div className="bg-white/90 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl p-4 border border-emerald-200/80 dark:border-emerald-500/30 text-center space-y-1 shadow-xs">
+                <div className="text-emerald-700 dark:text-emerald-400 text-2xl sm:text-3xl font-black">{waterSavedLiters} L</div>
+                <div className="text-[11px] font-extrabold text-slate-700 dark:text-slate-300">Water Saved</div>
               </div>
             </div>
           </div>
@@ -913,14 +927,14 @@ export const CustomerHome: React.FC = () => {
           )}
         </div>
 
-        {/* Can't Find Answer Instant Support Card */}
-        <div className="bg-gradient-to-r from-slate-900 via-emerald-950 to-slate-900 text-white rounded-2xl p-5 border border-emerald-900/50 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+        {/* Can't Find Answer Instant Support Card (Light Neumorphic Theme) */}
+        <div className="bg-gradient-to-r from-[#eef7f2] via-[#f4faf6] to-[#e8f5ee] dark:from-slate-900 dark:to-slate-950 text-slate-900 dark:text-white rounded-2xl p-5 border border-emerald-200/90 dark:border-slate-800 shadow-[6px_6px_20px_rgba(166,180,200,0.25)] flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
           <div className="space-y-1">
-            <div className="font-bold text-sm text-white flex items-center justify-center sm:justify-start gap-2">
-              <Bot className="w-4 h-4 text-emerald-400" />
+            <div className="font-extrabold text-sm text-slate-900 dark:text-white flex items-center justify-center sm:justify-start gap-2">
+              <Bot className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               <span>Still need custom assistance?</span>
             </div>
-            <p className="text-xs text-slate-300">
+            <p className="text-xs text-slate-600 dark:text-slate-300 font-medium">
               Our 24/7 ScrapBot AI Assistant can track your pickup, calculate rates, or escalate complaints immediately.
             </p>
           </div>
@@ -931,42 +945,33 @@ export const CustomerHome: React.FC = () => {
                 setAiDrawerDefaultTab('chat');
                 setShowAiDrawer(true);
               }}
-              className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs px-4 py-2.5 rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-5 py-3 rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-2 active:scale-95"
             >
-              <Bot className="w-4 h-4" />
+              <Bot className="w-4 h-4 text-white" />
               <span>Ask ScrapBot AI</span>
             </button>
-            <a
-              href="https://wa.me/918287214705"
-              target="_blank"
-              rel="noreferrer"
-              className="bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs px-3.5 py-2.5 rounded-xl border border-slate-700 transition-all flex items-center gap-1.5"
-            >
-              <MessageCircle className="w-4 h-4 text-emerald-400" />
-              <span>WhatsApp</span>
-            </a>
           </div>
         </div>
       </section>
 
-      {/* FOOTER */}
-      <footer className="bg-slate-900 text-slate-400 text-xs py-8 border-t border-slate-800">
+      {/* FOOTER (Clean Light Theme) */}
+      <footer className="bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 text-xs py-8 border-t border-slate-200/90 dark:border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-emerald-500 text-slate-950 font-black flex items-center justify-center text-xs">
+            <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white font-black flex items-center justify-center text-xs shadow-xs">
               SG
             </div>
-            <span className="font-bold text-white text-sm">SCRAPGO India</span>
+            <span className="font-bold text-slate-900 dark:text-white text-sm">SCRAPGO India</span>
             <span className="text-slate-500">| Certified Recycling Portal</span>
           </div>
 
-          <div className="flex items-center gap-4 text-[11px]">
+          <div className="flex items-center gap-4 text-[11px] font-semibold">
             <button
               onClick={() => {
                 setAiDrawerDefaultTab('chat');
                 setShowAiDrawer(true);
               }}
-              className="hover:text-white transition-colors cursor-pointer"
+              className="hover:text-emerald-600 dark:hover:text-white transition-colors cursor-pointer"
             >
               24/7 AI Support
             </button>
@@ -976,14 +981,20 @@ export const CustomerHome: React.FC = () => {
                 setAiDrawerDefaultTab('complaint');
                 setShowAiDrawer(true);
               }}
-              className="hover:text-white transition-colors cursor-pointer"
+              className="hover:text-emerald-600 dark:hover:text-white transition-colors cursor-pointer"
             >
               Register Complaint
             </button>
             <span>•</span>
-            <a href="tel:18001237272" className="hover:text-white transition-colors">
-              Helpline Number
-            </a>
+            <button
+              onClick={() => {
+                setAiDrawerDefaultTab('chat');
+                setShowAiDrawer(true);
+              }}
+              className="hover:text-emerald-600 dark:hover:text-white transition-colors cursor-pointer"
+            >
+              Digital Scale Policy
+            </button>
           </div>
 
           <div className="text-[11px] text-slate-500">
@@ -1012,35 +1023,42 @@ export const CustomerHome: React.FC = () => {
         }}
       />
 
-      {/* PROFESSIONAL FLOATING SIDE CHAT WIDGET (Neumorphic 3D Floating Action Button) */}
+      {/* UNIQUE CUTE SCRAPBOT AI CHATBOT WIDGET (Customer Homepage Exclusive) */}
       {!showAiDrawer && (
-        <div className="fixed bottom-26 sm:bottom-8 right-4 sm:right-8 z-40 flex items-center gap-2.5 group animate-in fade-in slide-in-from-bottom-5 duration-300">
-          {/* Tooltip / Prompt bubble */}
+        <div className="fixed bottom-26 sm:bottom-8 right-4 sm:right-8 z-40 flex items-center gap-3 group animate-in fade-in slide-in-from-bottom-5 duration-300">
+          {/* Cute Speech Bubble Prompt */}
           <button
             onClick={() => {
               setAiDrawerDefaultTab('chat');
               setShowAiDrawer(true);
             }}
-            className="hidden sm:flex items-center gap-2 bg-slate-900/95 text-white text-xs font-bold px-4 py-2.5 rounded-2xl shadow-2xl border border-slate-700/80 backdrop-blur-md transition-all cursor-pointer hover:border-emerald-500/60 hover:scale-105 active:scale-95 group-hover:shadow-emerald-500/20"
+            className="hidden sm:flex items-center gap-2 bg-white dark:bg-slate-800 text-slate-800 dark:text-white text-xs font-extrabold px-4 py-2.5 rounded-2xl shadow-[6px_6px_20px_rgba(166,180,200,0.35),-4px_-4px_12px_rgba(255,255,255,0.9)] dark:shadow-none border-2 border-emerald-300/80 dark:border-slate-700 transition-all cursor-pointer hover:border-emerald-500 hover:scale-105 active:scale-95"
           >
             <span className="relative flex h-2.5 w-2.5 shrink-0">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
             </span>
-            <span>Ask ScrapBot AI ⚡</span>
+            <span>Hi! Need help? Chat with ScrapBot 🤖💬</span>
           </button>
 
+          {/* Cute 3D Bot Avatar Button */}
           <button
             onClick={() => {
               setAiDrawerDefaultTab('chat');
               setShowAiDrawer(true);
             }}
-            className="relative w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-400 text-white shadow-[0_10px_25px_rgba(16,185,129,0.45)] flex items-center justify-center border-2 border-white/40 ring-4 ring-emerald-500/20 active:scale-90 transition-all cursor-pointer group"
-            title="Open ScrapBot AI Support"
+            className="relative w-15 h-15 rounded-3xl bg-gradient-to-tr from-[#15803d] via-[#10b981] to-[#34d399] hover:from-[#126b34] hover:to-[#059669] text-white shadow-[0_12px_28px_rgba(16,185,129,0.45)] flex items-center justify-center border-2 border-white ring-4 ring-emerald-400/25 active:scale-90 transition-all cursor-pointer group hover:rotate-6"
+            title="Chat with Cute ScrapBot AI"
           >
-            <Bot className="w-7 h-7 text-white group-hover:scale-110 group-hover:rotate-6 transition-transform" />
-            <span className="absolute -top-1 -right-1 px-1.5 py-0.5 bg-emerald-400 text-slate-950 font-black text-[9px] rounded-full border border-white shadow-xs tracking-wider">
-              ONLINE
+            <div className="relative flex items-center justify-center">
+              {/* Cute Bot Face */}
+              <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center text-white border border-white/40 shadow-inner group-hover:scale-110 transition-transform">
+                <Bot className="w-6 h-6 text-white" />
+              </div>
+              <Sparkles className="w-3.5 h-3.5 text-amber-300 absolute -top-1.5 -right-1.5 animate-bounce" />
+            </div>
+            <span className="absolute -top-1.5 -right-1.5 px-2 py-0.5 bg-amber-400 text-slate-950 font-black text-[9px] rounded-full border border-white shadow-xs tracking-wider uppercase">
+              ONLINE ⚡
             </span>
           </button>
         </div>
