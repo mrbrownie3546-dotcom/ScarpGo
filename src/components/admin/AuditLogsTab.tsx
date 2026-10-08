@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useScrap } from '../../context/ScrapContext';
 import { AuditLog } from '../../types/scrapgo';
+import { getAllBannedIps, unbanIpOrDevice, banCurrentIpOrDevice } from '../../lib/rateLimiter';
 import {
   ShieldAlert,
   CheckCircle2,
@@ -12,6 +13,8 @@ import {
   ArrowRight,
   Shield,
   FileSpreadsheet,
+  Ban,
+  Unlock,
 } from 'lucide-react';
 
 export const AuditLogsTab: React.FC = () => {
@@ -20,6 +23,12 @@ export const AuditLogsTab: React.FC = () => {
   const [selectedModule, setSelectedModule] = useState<string>('all');
   const [selectedResult, setSelectedResult] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [bannedList, setBannedList] = useState(() => getAllBannedIps());
+
+  const handleUnban = (target: string) => {
+    unbanIpOrDevice(target);
+    setBannedList(getAllBannedIps());
+  };
 
   const filteredLogs = auditLogs.filter((log) => {
     const matchesModule = selectedModule === 'all' || log.module === selectedModule;
@@ -74,7 +83,49 @@ export const AuditLogsTab: React.FC = () => {
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
+      {/* BANNED IPS & BOT DEFENSE CONTROL PANEL */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 text-white space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-7 h-7 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center border border-rose-500/30">
+              <Ban className="w-4 h-4" />
+            </span>
+            <h3 className="font-bold text-sm text-white">Banned IPs & Anti-Bot Shield ({bannedList.length})</h3>
+          </div>
+          <span className="text-[10px] font-mono text-emerald-400 font-bold bg-emerald-950/80 px-2 py-0.5 rounded-full border border-emerald-800">
+            Auto Defense Active
+          </span>
+        </div>
+
+        {bannedList.length === 0 ? (
+          <p className="text-xs text-slate-400 italic">No IPs currently banned. Automated bot defense is monitoring login & API traffic.</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-1">
+            {bannedList.map((item) => (
+              <div key={item.ip} className="bg-slate-950/80 border border-slate-800 rounded-xl p-3 text-xs flex items-center justify-between gap-2">
+                <div>
+                  <div className="font-mono font-bold text-rose-400 flex items-center gap-1.5">
+                    <span>{item.ip}</span>
+                  </div>
+                  <p className="text-[10px] text-slate-400 truncate max-w-[160px] mt-0.5" title={item.reason}>
+                    {item.reason}
+                  </p>
+                  <p className="text-[9px] text-slate-500 mt-0.5">
+                    Banned at: {new Date(item.bannedAt).toLocaleTimeString()}
+                  </p>
+                </div>
+                <button
+                  onClick={() => handleUnban(item.ip)}
+                  className="px-2.5 py-1 bg-slate-800 hover:bg-emerald-600 text-slate-300 hover:text-white rounded-lg font-bold text-[10px] transition-all shrink-0 flex items-center gap-1 cursor-pointer"
+                >
+                  <Unlock className="w-3 h-3" />
+                  <span>Unban</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-center justify-between gap-3 text-xs">
         <div className="relative w-full md:w-80">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />

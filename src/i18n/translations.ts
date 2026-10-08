@@ -26,9 +26,9 @@ export const TRANSLATIONS: Translations = {
     hinglish: '⚠️ Security Rule: Password kam se kam 4 characters ka hona zaroori hai.',
   },
   lockout_active_error: {
-    english: '🔒 Security Lockout Active: Too many failed attempts. Account temporarily locked for 60 seconds.',
-    hindi: '🔒 सुरक्षा लॉकआउट सक्रिय: बहुत अधिक असफल प्रयास। खाता 60 सेकंड के लिए अस्थायी रूप से लॉक है।',
-    hinglish: '🔒 Security Lockout Active: Bahut zyada galat attempts! Account 60 seconds ke liye locked hai.',
+    english: '🔒 Security Lockout Active: 3 consecutive failed attempts. Account temporarily locked for 30 seconds.',
+    hindi: '🔒 सुरक्षा लॉकआउट सक्रिय: 3 लगातार गलत प्रयास। खाता 30 सेकंड के लिए अस्थायी रूप से लॉक है।',
+    hinglish: '🔒 Security Lockout Active: 3 lga taar galat password! Account 30 seconds ke liye locked hai. Refresh/back par bhi timer active rahega.',
   },
 
   // Brand & Meta

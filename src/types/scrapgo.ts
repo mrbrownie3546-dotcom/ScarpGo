@@ -121,6 +121,11 @@ export interface Booking {
   payout_status: PayoutStatus;
   payout_reference?: string;
 
+  // Customer Rating & Review (distinct per completed pickup)
+  rating?: number;
+  review_comment?: string;
+  rated_at?: string;
+
   created_at: string;
   updated_at: string;
 }

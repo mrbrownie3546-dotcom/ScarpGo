@@ -1,6 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useScrap } from '../../context/ScrapContext';
 import { UserRole, UserProfile } from '../../types/scrapgo';
+import {
+  getLoginSecurityState,
+  recordFailedPasswordAttempt,
+  recordSuccessfulLogin,
+} from '../../lib/rateLimiter';
 import {
   X,
   Phone,
@@ -96,18 +101,27 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   // Security Rate Limiting & Lockout Protection
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [lockoutSeconds, setLockoutSeconds] = useState(0);
-  const MAX_ATTEMPTS = 5;
+  const [isBanned, setIsBanned] = useState(false);
+  const MAX_ATTEMPTS = 3;
 
   const { t } = useScrap();
 
+  const roleKey = selectedRole || (isAdminOnly ? 'admin' : 'customer');
+
+  const syncSecurityState = useCallback(() => {
+    const sec = getLoginSecurityState(roleKey);
+    setFailedAttempts(sec.failedAttempts);
+    setLockoutSeconds(sec.lockoutSeconds);
+    setIsBanned(sec.isBanned);
+  }, [roleKey]);
+
   useEffect(() => {
-    if (lockoutSeconds > 0) {
-      const timer = setInterval(() => {
-        setLockoutSeconds((prev) => (prev > 0 ? prev - 1 : 0));
-      }, 1000);
-      return () => clearInterval(timer);
-    }
-  }, [lockoutSeconds]);
+    syncSecurityState();
+    const timer = setInterval(() => {
+      syncSecurityState();
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [syncSecurityState]);
 
   const resetAllFormStates = () => {
     setEmail('');
@@ -150,6 +164,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setErrorMsg(null);
     setSuccessMsg(null);
 
+    const custKey = `cust_${phone.trim() || 'global'}`;
+    const sec = getLoginSecurityState(custKey);
+
+    if (sec.isBanned || isBanned) {
+      setErrorMsg('🚫 ACCESS DENIED: Anti-Bot System Active. Excessive brute-force attempts detected. IP Address Banned.');
+      return;
+    }
+
+    if (sec.isLocked || lockoutSeconds > 0) {
+      setErrorMsg(t('lockout_active_error', `🔒 Security Lockout Active: 3 lga taar galat password! Account ${sec.lockoutSeconds || lockoutSeconds}s ke liye locked hai. Refresh/back par bhi timer active rahega.`));
+      return;
+    }
+
     if (!phone.trim() || !password.trim()) {
       setErrorMsg('Kripya apna Phone Number aur Password enter karein.');
       return;
@@ -160,6 +187,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setLoading(false);
 
     if (res.success && res.user) {
+      recordSuccessfulLogin(custKey);
+      setFailedAttempts(0);
+      setLockoutSeconds(0);
       try {
         confetti({ particleCount: 60, spread: 60 });
       } catch (e) {
@@ -167,7 +197,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       }
       onClose();
     } else {
-      setErrorMsg(res.message);
+      const nextSec = recordFailedPasswordAttempt(custKey);
+      setFailedAttempts(nextSec.failedAttempts);
+      setLockoutSeconds(nextSec.lockoutSeconds);
+      setIsBanned(nextSec.isBanned);
+
+      if (nextSec.isBanned) {
+        setErrorMsg('🚫 ACCESS DENIED: Anti-Bot Defense Active. IP Banned due to excessive brute-force attempts.');
+      } else if (nextSec.isLocked) {
+        setErrorMsg(`🔒 Security Alert (Locked 30s): 3 lga taar galat password enter karne par account 30 seconds ke liye lock kar diya gaya hai.`);
+      } else {
+        const remaining = Math.max(0, 3 - nextSec.failedAttempts);
+        setErrorMsg(res.message || `🔐 Security Alert: Entered Credentials do not match. Remaining attempts: ${remaining}/3 before 30s lockout.`);
+      }
     }
   };
 
@@ -308,12 +350,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     e.preventDefault();
     setErrorMsg(null);
 
-    if (lockoutSeconds > 0) {
-      setErrorMsg(t('lockout_active_error', '🔒 Security Lockout Active: Too many failed attempts. Account temporarily locked for 60 seconds.'));
+    const inputEmail = email.trim().toLowerCase();
+    const staffKey = `staff_${inputEmail || 'global'}`;
+    const sec = getLoginSecurityState(staffKey);
+
+    if (sec.isBanned || isBanned) {
+      setErrorMsg('🚫 ACCESS DENIED: Anti-Bot System Active. Excessive brute-force attempts detected. IP Address Banned.');
       return;
     }
 
-    const inputEmail = email.trim().toLowerCase();
+    if (sec.isLocked || lockoutSeconds > 0) {
+      setErrorMsg(t('lockout_active_error', `🔒 Security Lockout Active: 3 lga taar galat password! Account ${sec.lockoutSeconds || lockoutSeconds}s ke liye locked hai. Refresh/back par bhi timer active rahega.`));
+      return;
+    }
+
     const inputPassword = password.trim();
 
     if (!inputEmail || !inputPassword) {
@@ -342,19 +392,26 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           vehicle_number: staff?.vehicle_number || 'HR 10 AB 4921 (Mahindra Bolero)',
         };
 
+        recordSuccessfulLogin(staffKey);
         setFailedAttempts(0);
+        setLockoutSeconds(0);
         try { confetti({ particleCount: 50, spread: 50 }); } catch (e) {}
         setCurrentUser(staffProfile);
         setActivePortal('staff');
         onClose();
       } else {
-        const nextFailed = failedAttempts + 1;
-        setFailedAttempts(nextFailed);
-        if (nextFailed >= MAX_ATTEMPTS) {
-          setLockoutSeconds(60);
-          setErrorMsg(t('lockout_active_error', '🔒 Security Lockout Active: Too many failed attempts. Account temporarily locked for 60 seconds.'));
+        const nextSec = recordFailedPasswordAttempt(staffKey);
+        setFailedAttempts(nextSec.failedAttempts);
+        setLockoutSeconds(nextSec.lockoutSeconds);
+        setIsBanned(nextSec.isBanned);
+
+        if (nextSec.isBanned) {
+          setErrorMsg('🚫 ACCESS DENIED: Anti-Bot Defense Active. IP Banned due to excessive brute-force attempts.');
+        } else if (nextSec.isLocked) {
+          setErrorMsg(`🔒 Security Alert (Locked 30s): 3 lga taar galat password enter karne par account 30 seconds ke liye lock kar diya gaya hai.`);
         } else {
-          setErrorMsg(t('invalid_credentials_error', '🔐 Security Alert: Entered Email Address & Password credentials do not match our records.'));
+          const remaining = Math.max(0, 3 - nextSec.failedAttempts);
+          setErrorMsg(`🔐 Security Alert: Entered Staff Email & Password do not match. Remaining attempts: ${remaining}/3 before 30s lockout.`);
         }
       }
     } catch (err: any) {
@@ -371,12 +428,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     e.preventDefault();
     setErrorMsg(null);
 
-    if (lockoutSeconds > 0) {
-      setErrorMsg(t('lockout_active_error', '🔒 Security Lockout Active: Too many failed attempts. Account temporarily locked for 60 seconds.'));
+    const inputEmail = email.trim().toLowerCase();
+    const adminKey = `admin_${inputEmail || 'super'}`;
+    const sec = getLoginSecurityState(adminKey);
+
+    if (sec.isBanned || isBanned) {
+      setErrorMsg('🚫 ACCESS DENIED: Anti-Bot System Active. Excessive brute-force attempts detected. IP Address Banned.');
       return;
     }
 
-    const inputEmail = email.trim().toLowerCase();
+    if (sec.isLocked || lockoutSeconds > 0) {
+      setErrorMsg(t('lockout_active_error', `🔒 Security Lockout Active: 3 lga taar galat password! Account ${sec.lockoutSeconds || lockoutSeconds}s ke liye locked hai. Refresh/back par bhi timer active rahega.`));
+      return;
+    }
+
     const inputPassword = password.trim();
 
     if (!inputEmail || !inputPassword) {
@@ -394,17 +459,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setLoading(false);
 
     if (res.success) {
+      recordSuccessfulLogin(adminKey);
       setFailedAttempts(0);
+      setLockoutSeconds(0);
       try { confetti({ particleCount: 70, spread: 70 }); } catch (e) {}
       onClose();
     } else {
-      const nextFailed = failedAttempts + 1;
-      setFailedAttempts(nextFailed);
-      if (nextFailed >= MAX_ATTEMPTS) {
-        setLockoutSeconds(60);
-        setErrorMsg(t('lockout_active_error', '🔒 Security Lockout Active: Too many failed attempts. Account temporarily locked for 60 seconds.'));
+      const nextSec = recordFailedPasswordAttempt(adminKey);
+      setFailedAttempts(nextSec.failedAttempts);
+      setLockoutSeconds(nextSec.lockoutSeconds);
+      setIsBanned(nextSec.isBanned);
+
+      if (nextSec.isBanned) {
+        setErrorMsg('🚫 ACCESS DENIED: Anti-Bot Defense Active. IP Banned due to excessive brute-force attempts.');
+      } else if (nextSec.isLocked) {
+        setErrorMsg(`🔒 Security Alert (Locked 30s): 3 lga taar galat password enter karne par account 30 seconds ke liye lock kar diya gaya hai.`);
       } else {
-        setErrorMsg(t('invalid_credentials_error', '🔐 Security Alert: Entered Email Address & Password credentials do not match our records.'));
+        const remaining = Math.max(0, 3 - nextSec.failedAttempts);
+        setErrorMsg(res.message || `🔐 Security Alert: Entered Admin Email & Password do not match. Remaining attempts: ${remaining}/3 before 30s lockout.`);
       }
     }
   };

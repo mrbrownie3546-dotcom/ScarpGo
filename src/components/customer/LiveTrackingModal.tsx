@@ -141,19 +141,77 @@ export const LiveTrackingModal: React.FC<LiveTrackingModalProps> = ({ booking, o
               )}
             </div>
 
-            {/* Visual Step Indicator */}
-            <div className="grid grid-cols-4 gap-2 text-center text-[10px] sm:text-xs font-semibold pt-2 border-t border-slate-800">
-              <div className={`p-2 rounded-xl border ${booking.status !== 'pending' ? 'bg-emerald-950/80 border-emerald-500/40 text-emerald-300' : 'bg-slate-800 border-slate-700 text-slate-400'}`}>
-                <span>1. Scheduled</span>
+            {/* Visual 4-Step Progress Tracker */}
+            <div className="space-y-2 pt-2 border-t border-slate-800">
+              <div className="grid grid-cols-4 gap-2 text-center text-[10px] sm:text-xs font-semibold">
+                <div
+                  className={`p-2.5 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${
+                    booking.status === 'pending'
+                      ? 'bg-gradient-to-b from-emerald-500 to-teal-600 text-white border-emerald-400 font-extrabold shadow-md'
+                      : 'bg-emerald-950/80 border-emerald-500/40 text-emerald-300'
+                  }`}
+                >
+                  <span className="text-[11px] uppercase tracking-wider font-extrabold">1. Requested</span>
+                  <span className="text-[9px] opacity-80">Order Placed</span>
+                </div>
+
+                <div
+                  className={`p-2.5 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${
+                    booking.status === 'assigned'
+                      ? 'bg-gradient-to-b from-emerald-500 to-teal-600 text-white border-emerald-400 font-extrabold shadow-md'
+                      : booking.status === 'on_the_way' || isArrived || isWeighing || isCompleted
+                      ? 'bg-emerald-950/80 border-emerald-500/40 text-emerald-300'
+                      : 'bg-slate-800/80 border-slate-700 text-slate-400'
+                  }`}
+                >
+                  <span className="text-[11px] uppercase tracking-wider font-extrabold">2. Assigned</span>
+                  <span className="text-[9px] opacity-80">Agent Ready</span>
+                </div>
+
+                <div
+                  className={`p-2.5 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${
+                    isEnRoute || isArrived || isWeighing
+                      ? 'bg-gradient-to-b from-emerald-500 to-teal-600 text-white border-emerald-400 font-extrabold shadow-md animate-pulse'
+                      : isCompleted
+                      ? 'bg-emerald-950/80 border-emerald-500/40 text-emerald-300'
+                      : 'bg-slate-800/80 border-slate-700 text-slate-400'
+                  }`}
+                >
+                  <span className="text-[11px] uppercase tracking-wider font-extrabold">3. In Progress</span>
+                  <span className="text-[9px] opacity-80">Doorstep Arrival</span>
+                </div>
+
+                <div
+                  className={`p-2.5 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${
+                    isCompleted
+                      ? 'bg-gradient-to-b from-emerald-500 to-teal-600 text-white border-emerald-400 font-extrabold shadow-md'
+                      : 'bg-slate-800/80 border-slate-700 text-slate-400'
+                  }`}
+                >
+                  <span className="text-[11px] uppercase tracking-wider font-extrabold">4. Completed</span>
+                  <span className="text-[9px] opacity-80">{isCompleted ? 'Ready to Review ⭐' : 'Review Unlocks'}</span>
+                </div>
               </div>
-              <div className={`p-2 rounded-xl border ${booking.status === 'assigned' || isEnRoute || isArrived || isCompleted ? 'bg-emerald-950/80 border-emerald-500/40 text-emerald-300' : 'bg-slate-800 border-slate-700 text-slate-400'}`}>
-                <span>2. Agent Assigned</span>
-              </div>
-              <div className={`p-2 rounded-xl border ${isEnRoute || isArrived || isCompleted ? 'bg-emerald-950/80 border-emerald-500/40 text-emerald-300' : 'bg-slate-800 border-slate-700 text-slate-400'}`}>
-                <span>3. On The Way</span>
-              </div>
-              <div className={`p-2 rounded-xl border ${isArrived || isCompleted ? 'bg-emerald-950/80 border-emerald-500/40 text-emerald-300' : 'bg-slate-800 border-slate-700 text-slate-400'}`}>
-                <span>4. Arrived</span>
+
+              {/* Informative Guidance Callout for Customer Review */}
+              <div
+                className={`p-2.5 rounded-xl text-xs font-bold flex items-center justify-between border ${
+                  isCompleted
+                    ? 'bg-amber-400/20 border-amber-400/40 text-amber-200'
+                    : 'bg-slate-800/60 border-slate-700/80 text-slate-300'
+                }`}
+              >
+                <span className="flex items-center gap-1.5">
+                  {isCompleted ? '⭐ Pickup Complete!' : '⏳ Status Info:'}
+                  <span className="font-medium">
+                    {isCompleted
+                      ? 'You can now rate driver & scale accuracy in your Customer Account.'
+                      : 'Customer reviews unlock automatically at Step 4 (Completed).'}
+                  </span>
+                </span>
+                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-slate-900 border border-slate-700 shrink-0">
+                  {isCompleted ? 'Review Available' : 'Step ' + (booking.status === 'pending' ? '1' : booking.status === 'assigned' ? '2' : isCompleted ? '4' : '3') + '/4'}
+                </span>
               </div>
             </div>
           </div>

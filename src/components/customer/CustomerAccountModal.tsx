@@ -22,6 +22,9 @@ import {
   Sparkles,
   ClipboardList,
   UserCheck,
+  Star,
+  MessageSquare,
+  AlertCircle,
 } from 'lucide-react';
 
 interface CustomerAccountModalProps {
@@ -37,10 +40,16 @@ export const CustomerAccountModal: React.FC<CustomerAccountModalProps> = ({
   onSelectTrackingBooking,
   onOpenLogin,
 }) => {
-  const { currentUser, logoutUser, bookings, getStatusLabel } = useScrap();
+  const { currentUser, logoutUser, bookings, getStatusLabel, submitPickupRating } = useScrap();
 
   const [copiedOtpBookingId, setCopiedOtpBookingId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'summary' | 'active' | 'history'>('summary');
+  const [activeTab, setActiveTab] = useState<'summary' | 'active' | 'history' | 'reviews' | 'my-reviews'>('summary');
+
+  // Rating & Review State per booking
+  const [ratingInput, setRatingInput] = useState<Record<string, number>>({});
+  const [commentInput, setCommentInput] = useState<Record<string, string>>({});
+  const [reviewError, setReviewError] = useState<Record<string, string | null>>({});
+  const [reviewSuccess, setReviewSuccess] = useState<Record<string, string | null>>({});
 
   // Strict check: Must be a real logged in customer (not admin, staff, or guest)
   const isRealCustomer = Boolean(
@@ -96,6 +105,11 @@ export const CustomerAccountModal: React.FC<CustomerAccountModalProps> = ({
     (b) => b.status !== 'completed' && b.status !== 'cancelled'
   );
   const completedBookings = myBookings.filter((b) => b.status === 'completed');
+  const ratedBookings = myBookings.filter((b) => typeof b.rating === 'number' && b.rating > 0);
+  const avgRatingScore =
+    ratedBookings.length > 0
+      ? (ratedBookings.reduce((sum, b) => sum + (b.rating || 0), 0) / ratedBookings.length).toFixed(1)
+      : '0.0';
 
   const totalPayoutEarned = completedBookings.reduce(
     (sum, b) => sum + (b.final_amount || (b.estimated_weight_kg ? b.estimated_weight_kg * 30 : 200)),
@@ -168,29 +182,29 @@ export const CustomerAccountModal: React.FC<CustomerAccountModalProps> = ({
         </div>
 
         {/* Tab Selection Bar */}
-        <div className="bg-[#f0f4f8] dark:bg-slate-900 p-2 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-center gap-2 shrink-0">
+        <div className="bg-[#f0f4f8] dark:bg-slate-900 p-2 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-start sm:justify-center gap-2 overflow-x-auto whitespace-nowrap shrink-0 scrollbar-none">
           <button
             onClick={() => setActiveTab('summary')}
-            className={`px-4 py-2 rounded-2xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
+            className={`px-3.5 py-2 rounded-2xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
               activeTab === 'summary'
                 ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
                 : 'bg-white/60 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-white'
             }`}
           >
             <TrendingUp className="w-4 h-4" />
-            <span>Earnings & Summary</span>
+            <span>Summary</span>
           </button>
 
           <button
             onClick={() => setActiveTab('active')}
-            className={`px-4 py-2 rounded-2xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 relative ${
+            className={`px-3.5 py-2 rounded-2xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 relative shrink-0 ${
               activeTab === 'active'
                 ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
                 : 'bg-white/60 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-white'
             }`}
           >
             <Truck className="w-4 h-4" />
-            <span>Active Requests ({activeBookings.length})</span>
+            <span>Active ({activeBookings.length})</span>
             {activeBookings.length > 0 && (
               <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
             )}
@@ -198,14 +212,38 @@ export const CustomerAccountModal: React.FC<CustomerAccountModalProps> = ({
 
           <button
             onClick={() => setActiveTab('history')}
-            className={`px-4 py-2 rounded-2xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
+            className={`px-3.5 py-2 rounded-2xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
               activeTab === 'history'
                 ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
                 : 'bg-white/60 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-white'
             }`}
           >
             <Clock className="w-4 h-4" />
-            <span>Past History ({completedBookings.length})</span>
+            <span>History ({completedBookings.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('reviews')}
+            className={`px-3.5 py-2 rounded-2xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+              activeTab === 'reviews'
+                ? 'bg-amber-500 text-white shadow-md shadow-amber-500/30'
+                : 'bg-white/60 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-white'
+            }`}
+          >
+            <Star className="w-4 h-4 fill-amber-300 text-amber-300" />
+            <span>Rate Pickup ({completedBookings.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('my-reviews')}
+            className={`px-3.5 py-2 rounded-2xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+              activeTab === 'my-reviews'
+                ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30'
+                : 'bg-white/60 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-white'
+            }`}
+          >
+            <MessageSquare className="w-4 h-4 text-amber-400" />
+            <span>My Reviews ({ratedBookings.length})</span>
           </button>
         </div>
 
@@ -504,6 +542,32 @@ export const CustomerAccountModal: React.FC<CustomerAccountModalProps> = ({
                               );
                             })}
                           </div>
+
+                          {/* Review Readiness Status Banner */}
+                          <div
+                            className={`mt-2 p-2.5 rounded-xl text-xs font-bold flex items-center justify-between border ${
+                              b.status === 'completed'
+                                ? 'bg-amber-50 dark:bg-amber-950/60 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200'
+                                : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+                            }`}
+                          >
+                            <span className="flex items-center gap-1.5">
+                              {b.status === 'completed' ? '⭐ Ready to Rate:' : 'ℹ️ When to Review:'}
+                              <span className="font-normal">
+                                {b.status === 'completed'
+                                  ? 'Pickup complete! Switch to "Rate Pickups" tab above to rate your experience.'
+                                  : 'Review option will activate automatically once Step 4 (Completed) is reached.'}
+                              </span>
+                            </span>
+                            {b.status === 'completed' && (
+                              <button
+                                onClick={() => setActiveTab('reviews')}
+                                className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black uppercase transition-all shadow-2xs shrink-0 cursor-pointer"
+                              >
+                                Rate Now →
+                              </button>
+                            )}
+                          </div>
                         </div>
 
                         {/* Secret OTP Display */}
@@ -553,44 +617,346 @@ export const CustomerAccountModal: React.FC<CustomerAccountModalProps> = ({
             </div>
           )}
 
-          {activeTab === 'history' && (
+          {(activeTab === 'history' || activeTab === 'reviews') && (
             <div className="space-y-4">
-              <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <span>Completed Pickup Orders ({completedBookings.length})</span>
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                  {activeTab === 'reviews' ? (
+                    <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                  ) : (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  )}
+                  <span>
+                    {activeTab === 'reviews'
+                      ? `Rate Your SCRAPGO Pickup Experience (${completedBookings.length})`
+                      : `Completed Pickup History (${completedBookings.length})`}
+                  </span>
+                </h3>
+              </div>
 
               {completedBookings.length === 0 ? (
                 <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 text-center space-y-2 border border-slate-200 dark:border-slate-700">
-                  <p className="text-xs text-slate-500">No completed pickup history found yet.</p>
+                  <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center mx-auto text-xl">
+                    ⭐
+                  </div>
+                  <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                    No Completed Pickups To Rate Yet
+                  </h4>
+                  <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                    Aapka jab koi pickup request complete aur final hoga, to yahan har pickup ke liye rating dene ka option aayega!
+                  </p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {completedBookings.map((b) => (
-                    <div
-                      key={b.id}
-                      className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs"
-                    >
-                      <div>
-                        <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                          {b.booking_number}
-                        </span>
-                        <span className="text-slate-400 ml-2">
-                          {new Date(b.created_at).toLocaleDateString()}
-                        </span>
-                        <p className="text-slate-500 mt-0.5 line-clamp-1">{b.pickup_address}</p>
-                      </div>
+                <div className="space-y-4">
+                  {completedBookings.map((b) => {
+                    const selectedRating = ratingInput[b.id] || b.rating || 5;
+                    const comment = commentInput[b.id] ?? (b.review_comment || '');
+                    const err = reviewError[b.id];
+                    const succ = reviewSuccess[b.id];
 
-                      <div className="text-right">
-                        <span className="font-black text-emerald-600 dark:text-emerald-400 text-sm block">
-                          +₹{b.final_amount || 250}
-                        </span>
-                        <span className="text-[10px] text-slate-400 uppercase font-bold">
-                          Paid via UPI / Cash
-                        </span>
+                    const handleRatingSubmit = (e: React.FormEvent) => {
+                      e.preventDefault();
+                      setReviewError((prev) => ({ ...prev, [b.id]: null }));
+                      setReviewSuccess((prev) => ({ ...prev, [b.id]: null }));
+
+                      const res = submitPickupRating(b.id, selectedRating, comment);
+                      if (!res.success) {
+                        setReviewError((prev) => ({ ...prev, [b.id]: res.message }));
+                      } else {
+                        setReviewSuccess((prev) => ({ ...prev, [b.id]: res.message }));
+                      }
+                    };
+
+                    return (
+                      <div
+                        key={b.id}
+                        className="bg-white dark:bg-slate-800 rounded-3xl p-5 border border-slate-200 dark:border-slate-700 space-y-4 shadow-xs"
+                      >
+                        {/* Header info */}
+                        <div className="flex items-start justify-between border-b border-slate-100 dark:border-slate-700/60 pb-3">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950 px-2.5 py-0.5 rounded-md border border-emerald-300 dark:border-emerald-800">
+                                {b.booking_number}
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-semibold">
+                                {new Date(b.created_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-600 dark:text-slate-300 font-medium line-clamp-1 mt-1">
+                              📍 {b.pickup_address}
+                            </p>
+                            {b.staff_name && (
+                              <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                                🚚 Pickup Agent: <span className="font-bold text-slate-800 dark:text-slate-200">{b.staff_name}</span>
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="text-right">
+                            <span className="font-black text-emerald-600 dark:text-emerald-400 text-sm block">
+                              +₹{b.final_amount || 250}
+                            </span>
+                            <span className="text-[10px] text-slate-400 uppercase font-bold">
+                              Paid via UPI / Cash
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Rating section for this specific pickup */}
+                        <div className="bg-slate-50 dark:bg-slate-900/90 rounded-2xl p-4 border border-slate-200/80 dark:border-slate-700 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-extrabold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                              <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                              <span>Rate Your SCRAPGO Pickup Experience</span>
+                            </span>
+                            {b.rating && (
+                              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full border border-emerald-300">
+                                Verified Review
+                              </span>
+                            )}
+                          </div>
+
+                          {err && (
+                            <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-center gap-2">
+                              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                              <span>{err}</span>
+                            </div>
+                          )}
+
+                          {succ && (
+                            <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
+                              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                              <span>{succ}</span>
+                            </div>
+                          )}
+
+                          {b.rating && !succ ? (
+                            <div className="space-y-1.5">
+                              <div className="flex items-center gap-1">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <Star
+                                    key={star}
+                                    className={`w-5 h-5 ${
+                                      star <= (b.rating || 5)
+                                        ? 'text-amber-400 fill-amber-400'
+                                        : 'text-slate-300 dark:text-slate-700'
+                                    }`}
+                                  />
+                                ))}
+                                <span className="text-xs font-bold text-slate-700 dark:text-slate-300 ml-2">
+                                  {b.rating}/5 Rating Given
+                                </span>
+                              </div>
+                              {b.review_comment && (
+                                <p className="text-xs text-slate-600 dark:text-slate-300 italic bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200/80 dark:border-slate-700">
+                                  "{b.review_comment}"
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <form onSubmit={handleRatingSubmit} className="space-y-3">
+                              {/* 5-Star Interactive Selector */}
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-slate-500">Stars:</span>
+                                <div className="flex items-center gap-1">
+                                  {[1, 2, 3, 4, 5].map((star) => (
+                                    <button
+                                      key={star}
+                                      type="button"
+                                      onClick={() =>
+                                        setRatingInput((prev) => ({ ...prev, [b.id]: star }))
+                                      }
+                                      className="p-1 hover:scale-125 transition-transform cursor-pointer"
+                                    >
+                                      <Star
+                                        className={`w-6 h-6 ${
+                                          star <= selectedRating
+                                            ? 'text-amber-400 fill-amber-400'
+                                            : 'text-slate-300 dark:text-slate-700'
+                                        }`}
+                                      />
+                                    </button>
+                                  ))}
+                                </div>
+                                <span className="text-xs font-bold text-amber-600 dark:text-amber-400">
+                                  ({selectedRating} / 5 Stars)
+                                </span>
+                              </div>
+
+                              {/* Comment Box */}
+                              <div className="relative">
+                                <MessageSquare className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                                <textarea
+                                  value={comment}
+                                  onChange={(e) =>
+                                    setCommentInput((prev) => ({ ...prev, [b.id]: e.target.value }))
+                                  }
+                                  placeholder="Kasie laga pickup behavior, digital scale weighing, aur spot payout? (Rate limit protected)..."
+                                  rows={2}
+                                  className="w-full pl-9 pr-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                />
+                              </div>
+
+                              <button
+                                type="submit"
+                                className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-extrabold text-xs shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+                              >
+                                <Star className="w-3.5 h-3.5 fill-white text-white" />
+                                <span>Submit Review for Pickup #{b.booking_number}</span>
+                              </button>
+                            </form>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'my-reviews' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4 text-amber-500 fill-amber-500/20" />
+                  <span>My Submitted Reviews & Feedback ({ratedBookings.length})</span>
+                </h3>
+                {ratedBookings.length > 0 && (
+                  <span className="text-xs font-black px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 flex items-center gap-1">
+                    <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+                    Avg: {avgRatingScore} / 5.0
+                  </span>
+                )}
+              </div>
+
+              {ratedBookings.length === 0 ? (
+                <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 text-center space-y-3 border border-slate-200 dark:border-slate-700 shadow-xs">
+                  <div className="w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-950/60 text-amber-500 flex items-center justify-center mx-auto text-2xl border border-amber-200 dark:border-amber-800">
+                    ✍️
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-extrabold text-slate-800 dark:text-slate-200">
+                      No Submitted Feedback Yet
+                    </h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto mt-1 leading-relaxed">
+                      Jab aap kisi completed pickup request par rating aur review submit karenge, to aapke saare past ratings, written comments, aur exact timestamps yahan display honge!
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab('reviews')}
+                    className="mt-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-black text-xs shadow-md transition-all cursor-pointer inline-flex items-center gap-1.5"
+                  >
+                    <Star className="w-4 h-4 fill-white" />
+                    <span>Rate Completed Pickups Now</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Summary Card */}
+                  <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-300/60 dark:border-amber-800/60 rounded-2xl p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-amber-500 text-white font-black text-lg flex items-center justify-center shadow-md">
+                        ⭐
+                      </div>
+                      <div>
+                        <div className="text-xs font-black text-slate-800 dark:text-slate-100">
+                          {ratedBookings.length} {ratedBookings.length === 1 ? 'Review' : 'Reviews'} Submitted
+                        </div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                          Average Rating Given: <span className="font-extrabold text-amber-600 dark:text-amber-400">{avgRatingScore} Stars</span>
+                        </div>
                       </div>
                     </div>
-                  ))}
+                    <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                      Verified Feedback
+                    </span>
+                  </div>
+
+                  {/* Reviews List */}
+                  {ratedBookings.map((b) => {
+                    const reviewDate = b.rated_at
+                      ? new Date(b.rated_at).toLocaleString('en-IN', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: true,
+                        })
+                      : new Date(b.updated_at || b.created_at).toLocaleDateString('en-IN', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        });
+
+                    return (
+                      <div
+                        key={b.id}
+                        className="bg-white dark:bg-slate-800 rounded-3xl p-5 border border-slate-200 dark:border-slate-700 space-y-3.5 shadow-xs transition-all hover:border-amber-300 dark:hover:border-amber-700"
+                      >
+                        {/* Rating Header */}
+                        <div className="flex items-start justify-between border-b border-slate-100 dark:border-slate-700/60 pb-3">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/80 px-2.5 py-0.5 rounded-md border border-amber-200 dark:border-amber-800">
+                                #{b.booking_number}
+                              </span>
+                              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1">
+                                <Clock className="w-3 h-3 text-slate-400" />
+                                {reviewDate}
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-600 dark:text-slate-300 font-medium line-clamp-1 mt-1">
+                              📍 {b.pickup_address}
+                            </p>
+                          </div>
+
+                          <div className="text-right">
+                            <span className="font-black text-emerald-600 dark:text-emerald-400 text-sm block">
+                              +₹{b.final_amount || 250}
+                            </span>
+                            <span className="text-[10px] text-slate-400 uppercase font-bold">
+                              Pickup Completed
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Stars & Score */}
+                        <div className="flex items-center justify-between bg-amber-50/60 dark:bg-amber-950/30 p-3 rounded-2xl border border-amber-200/60 dark:border-amber-900/40">
+                          <div className="flex items-center gap-1.5">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                className={`w-4 h-4 ${
+                                  star <= (b.rating || 5)
+                                    ? 'text-amber-400 fill-amber-400'
+                                    : 'text-slate-300 dark:text-slate-700'
+                                }`}
+                              />
+                            ))}
+                            <span className="text-xs font-black text-amber-700 dark:text-amber-300 ml-1">
+                              {b.rating}/5 Rating
+                            </span>
+                          </div>
+
+                          {b.staff_name && (
+                            <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">
+                              Agent: <strong className="text-slate-800 dark:text-slate-200">{b.staff_name}</strong>
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Feedback text */}
+                        <div className="bg-slate-50 dark:bg-slate-900/80 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-700/80">
+                          <p className="text-xs text-slate-700 dark:text-slate-200 italic leading-relaxed">
+                            "{b.review_comment || 'No written comment provided with rating.'}"
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

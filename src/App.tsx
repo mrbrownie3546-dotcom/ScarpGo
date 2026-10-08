@@ -10,6 +10,7 @@ import { CustomerHome } from './components/customer/CustomerHome';
 import { StaffDashboard } from './components/staff/StaffDashboard';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { AuthModal } from './components/common/AuthModal';
+import { AntiBotBanOverlay } from './components/common/AntiBotBanOverlay';
 import { ShieldAlert, Truck, Lock, ArrowLeft, LogIn } from 'lucide-react';
 
 interface ErrorBoundaryProps {
@@ -166,6 +167,7 @@ const MainPortalView: React.FC = () => {
           onClose={() => setShowAuthModal(false)}
         />
       )}
+      <AntiBotBanOverlay />
     </div>
   );
 };

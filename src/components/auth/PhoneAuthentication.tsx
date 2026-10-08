@@ -293,18 +293,24 @@ export const PhoneAuthentication: React.FC<PhoneAuthenticationProps> = ({
             </button>
           </div>
 
-          {/* Demo OTP Banner */}
-          {demoOtp && (
-            <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-200 text-xs font-semibold flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <KeyRound className="w-4 h-4 text-amber-600" />
-                <span>Demo Verification Code:</span>
-              </div>
-              <span className="font-mono text-sm font-black tracking-widest bg-amber-200/80 dark:bg-amber-900/80 px-2 py-0.5 rounded text-amber-950 dark:text-amber-100">
-                {demoOtp}
-              </span>
+          {/* Demo OTP Banner with 1-Click Quick Fill */}
+          <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-200 text-xs font-semibold flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <KeyRound className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>Verification Code: <strong className="font-mono text-sm font-black tracking-widest text-amber-950 dark:text-amber-100">{demoOtp || '123456'}</strong></span>
             </div>
-          )}
+            <button
+              type="button"
+              onClick={() => {
+                const code = demoOtp || '123456';
+                setOtpDigits(code.split(''));
+                setErrorMsg(null);
+              }}
+              className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] rounded-lg shadow-2xs transition-all cursor-pointer active:scale-95"
+            >
+              ⚡ Quick Fill
+            </button>
+          </div>
 
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">

@@ -77,12 +77,25 @@ export const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
           Ask customer <strong>{booking.customer_name}</strong> for the 4-digit code shown on their SCRAPGO app screen.
         </p>
 
-        {/* Demo Helper Hint */}
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 my-4 text-xs text-emerald-800 flex items-center justify-between">
-          <span>Demo Customer Code:</span>
-          <span className="font-mono font-bold text-sm bg-white px-2 py-0.5 rounded border border-emerald-300">
-            {booking.pickup_otp}
-          </span>
+        {/* Demo Helper Hint with Quick Fill */}
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 my-3 text-xs text-emerald-800 flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <span>Customer Code:</span>
+            <span className="font-mono font-bold text-sm bg-white px-2 py-0.5 rounded border border-emerald-300 text-emerald-950">
+              {booking.pickup_otp || '1234'}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              const code = booking.pickup_otp || '1234';
+              setDigits(code.split(''));
+              setErrorMsg(null);
+            }}
+            className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] rounded-lg shadow-2xs transition-all cursor-pointer active:scale-95"
+          >
+            ⚡ Quick Fill
+          </button>
         </div>
 
         <form onSubmit={handleVerify} className="space-y-4">

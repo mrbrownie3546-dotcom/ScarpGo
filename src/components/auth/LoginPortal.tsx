@@ -1,6 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useScrap } from '../../context/ScrapContext';
 import { UserRole, UserProfile } from '../../types/scrapgo';
+import {
+  getLoginSecurityState,
+  recordFailedPasswordAttempt,
+  recordSuccessfulLogin,
+} from '../../lib/rateLimiter';
 import {
   Phone,
   Mail,
@@ -81,18 +86,27 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
   // Security Rate Limiting & Lockout Protection
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [lockoutSeconds, setLockoutSeconds] = useState(0);
-  const MAX_ATTEMPTS = 5;
+  const [isBanned, setIsBanned] = useState(false);
+  const MAX_ATTEMPTS = 3;
 
   const { t } = useScrap();
 
-  React.useEffect(() => {
-    if (lockoutSeconds > 0) {
-      const timer = setInterval(() => {
-        setLockoutSeconds((prev) => (prev > 0 ? prev - 1 : 0));
-      }, 1000);
-      return () => clearInterval(timer);
-    }
-  }, [lockoutSeconds]);
+  const roleKey = selectedRole || 'customer';
+
+  const syncSecurityState = useCallback(() => {
+    const sec = getLoginSecurityState(roleKey);
+    setFailedAttempts(sec.failedAttempts);
+    setLockoutSeconds(sec.lockoutSeconds);
+    setIsBanned(sec.isBanned);
+  }, [roleKey]);
+
+  useEffect(() => {
+    syncSecurityState();
+    const timer = setInterval(() => {
+      syncSecurityState();
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [syncSecurityState]);
 
   const resetAllFormStates = () => {
     setEmail('');
@@ -133,8 +147,16 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
     setErrorMsg(null);
     setSuccessMsg(null);
 
-    if (lockoutSeconds > 0) {
-      setErrorMsg(t('lockout_active_error', '🔒 Security Lockout Active: Too many failed attempts. Account temporarily locked for 60 seconds.'));
+    const custKey = `cust_${phone.trim() || 'global'}`;
+    const sec = getLoginSecurityState(custKey);
+
+    if (sec.isBanned || isBanned) {
+      setErrorMsg('🚫 ACCESS DENIED: Anti-Bot System Active. Excessive brute-force attempts detected. IP Address Banned.');
+      return;
+    }
+
+    if (sec.isLocked || lockoutSeconds > 0) {
+      setErrorMsg(t('lockout_active_error', `🔒 Security Lockout Active: 3 lga taar galat password! Account ${sec.lockoutSeconds || lockoutSeconds}s ke liye locked hai. Refresh/back par bhi timer active rahega.`));
       return;
     }
 
@@ -148,18 +170,25 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
     setLoading(false);
 
     if (res.success && res.user) {
+      recordSuccessfulLogin(custKey);
       setFailedAttempts(0);
+      setLockoutSeconds(0);
       try { confetti({ particleCount: 60, spread: 60 }); } catch (e) {}
       if (onSuccess) onSuccess(res.user);
       if (onClose) onClose();
     } else {
-      const nextFailed = failedAttempts + 1;
-      setFailedAttempts(nextFailed);
-      if (nextFailed >= MAX_ATTEMPTS) {
-        setLockoutSeconds(60);
-        setErrorMsg(t('lockout_active_error', '🔒 Security Lockout Active: Too many failed attempts. Account temporarily locked for 60 seconds.'));
+      const nextSec = recordFailedPasswordAttempt(custKey);
+      setFailedAttempts(nextSec.failedAttempts);
+      setLockoutSeconds(nextSec.lockoutSeconds);
+      setIsBanned(nextSec.isBanned);
+
+      if (nextSec.isBanned) {
+        setErrorMsg('🚫 ACCESS DENIED: Anti-Bot Defense Active. IP Banned due to excessive brute-force attempts.');
+      } else if (nextSec.isLocked) {
+        setErrorMsg(`🔒 Security Alert (Locked 30s): 3 lga taar galat password enter karne par account 30 seconds ke liye lock kar diya gaya hai.`);
       } else {
-        setErrorMsg(res.message || t('invalid_credentials_error', '🔐 Security Alert: Entered Email Address/Phone Number and Password credentials do not match our records. Kripya Email ID/Phone aur Password dono check karein.'));
+        const remaining = Math.max(0, 3 - nextSec.failedAttempts);
+        setErrorMsg(res.message || `🔐 Security Alert: Entered Credentials do not match. Remaining attempts: ${remaining}/3 before 30s lockout.`);
       }
     }
   };
@@ -194,10 +223,10 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
       return;
     }
 
-    const res = await verifyPhoneOtp(phone, enteredOtp);
+    const res = await verifyPhoneOtp(phone, enteredOtp, true);
     if (res.success) {
       setRegisterStep('details');
-      setSuccessMsg('Phone verified! Enter details below to create account.');
+      setSuccessMsg('Phone number verified! Fill in details below to complete registration.');
     } else {
       setErrorMsg(res.message);
     }
@@ -292,12 +321,20 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
     e.preventDefault();
     setErrorMsg(null);
 
-    if (lockoutSeconds > 0) {
-      setErrorMsg(t('lockout_active_error', '🔒 Security Lockout Active: Too many failed attempts. Account temporarily locked for 60 seconds.'));
+    const inputEmail = email.trim().toLowerCase();
+    const staffKey = `staff_${inputEmail || 'global'}`;
+    const sec = getLoginSecurityState(staffKey);
+
+    if (sec.isBanned || isBanned) {
+      setErrorMsg('🚫 ACCESS DENIED: Anti-Bot System Active. Excessive brute-force attempts detected. IP Address Banned.');
       return;
     }
 
-    const inputEmail = email.trim().toLowerCase();
+    if (sec.isLocked || lockoutSeconds > 0) {
+      setErrorMsg(t('lockout_active_error', `🔒 Security Lockout Active: 3 lga taar galat password! Account ${sec.lockoutSeconds || lockoutSeconds}s ke liye locked hai. Refresh/back par bhi timer active rahega.`));
+      return;
+    }
+
     const inputPassword = password.trim();
 
     if (!inputEmail || !inputPassword) {
@@ -326,20 +363,27 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
           vehicle_number: staff?.vehicle_number || 'HR 10 AB 4921 (Mahindra Bolero)',
         };
 
+        recordSuccessfulLogin(staffKey);
         setFailedAttempts(0);
+        setLockoutSeconds(0);
         try { confetti({ particleCount: 50, spread: 50 }); } catch (e) {}
         setCurrentUser(staffProfile);
         setActivePortal('staff');
         if (onSuccess) onSuccess(staffProfile);
         if (onClose) onClose();
       } else {
-        const nextFailed = failedAttempts + 1;
-        setFailedAttempts(nextFailed);
-        if (nextFailed >= MAX_ATTEMPTS) {
-          setLockoutSeconds(60);
-          setErrorMsg(t('lockout_active_error', '🔒 Security Lockout Active: Too many failed attempts. Account temporarily locked for 60 seconds.'));
+        const nextSec = recordFailedPasswordAttempt(staffKey);
+        setFailedAttempts(nextSec.failedAttempts);
+        setLockoutSeconds(nextSec.lockoutSeconds);
+        setIsBanned(nextSec.isBanned);
+
+        if (nextSec.isBanned) {
+          setErrorMsg('🚫 ACCESS DENIED: Anti-Bot Defense Active. IP Banned due to excessive brute-force attempts.');
+        } else if (nextSec.isLocked) {
+          setErrorMsg(`🔒 Security Alert (Locked 30s): 3 lga taar galat password enter karne par account 30 seconds ke liye lock kar diya gaya hai.`);
         } else {
-          setErrorMsg(t('invalid_credentials_error', '🔐 Security Alert: Entered Email Address & Password credentials do not match our records.'));
+          const remaining = Math.max(0, 3 - nextSec.failedAttempts);
+          setErrorMsg(`🔐 Security Alert: Entered Staff Email & Password credentials do not match. Remaining attempts: ${remaining}/3 before 30s lockout.`);
         }
       }
     } catch (err: any) {
@@ -354,12 +398,20 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
     e.preventDefault();
     setErrorMsg(null);
 
-    if (lockoutSeconds > 0) {
-      setErrorMsg(t('lockout_active_error', '🔒 Security Lockout Active: Too many failed attempts. Account temporarily locked for 60 seconds.'));
+    const inputEmail = email.trim().toLowerCase();
+    const adminKey = `admin_${inputEmail || 'super'}`;
+    const sec = getLoginSecurityState(adminKey);
+
+    if (sec.isBanned || isBanned) {
+      setErrorMsg('🚫 ACCESS DENIED: Anti-Bot System Active. Excessive brute-force attempts detected. IP Address Banned.');
       return;
     }
 
-    const inputEmail = email.trim().toLowerCase();
+    if (sec.isLocked || lockoutSeconds > 0) {
+      setErrorMsg(t('lockout_active_error', `🔒 Security Lockout Active: 3 lga taar galat password! Account ${sec.lockoutSeconds || lockoutSeconds}s ke liye locked hai. Refresh/back par bhi timer active rahega.`));
+      return;
+    }
+
     const inputPassword = password.trim();
 
     if (!inputEmail || !inputPassword) {
@@ -377,17 +429,24 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
     setLoading(false);
 
     if (res.success) {
+      recordSuccessfulLogin(adminKey);
       setFailedAttempts(0);
+      setLockoutSeconds(0);
       try { confetti({ particleCount: 70, spread: 70 }); } catch (e) {}
       if (onClose) onClose();
     } else {
-      const nextFailed = failedAttempts + 1;
-      setFailedAttempts(nextFailed);
-      if (nextFailed >= MAX_ATTEMPTS) {
-        setLockoutSeconds(60);
-        setErrorMsg(t('lockout_active_error', '🔒 Security Lockout Active: Too many failed attempts. Account temporarily locked for 60 seconds.'));
+      const nextSec = recordFailedPasswordAttempt(adminKey);
+      setFailedAttempts(nextSec.failedAttempts);
+      setLockoutSeconds(nextSec.lockoutSeconds);
+      setIsBanned(nextSec.isBanned);
+
+      if (nextSec.isBanned) {
+        setErrorMsg('🚫 ACCESS DENIED: Anti-Bot Defense Active. IP Banned due to excessive brute-force attempts.');
+      } else if (nextSec.isLocked) {
+        setErrorMsg(`🔒 Security Alert (Locked 30s): 3 lga taar galat password enter karne par account 30 seconds ke liye lock kar diya gaya hai.`);
       } else {
-        setErrorMsg(t('invalid_credentials_error', '🔐 Security Alert: Entered Email Address & Password credentials do not match our records.'));
+        const remaining = Math.max(0, 3 - nextSec.failedAttempts);
+        setErrorMsg(res.message || `🔐 Security Alert: Entered Admin Email & Password do not match. Remaining attempts: ${remaining}/3 before 30s lockout.`);
       }
     }
   };
@@ -683,6 +742,25 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
                       <p className="text-slate-500 text-[11px]">Sent to <strong>{phone}</strong></p>
                     </div>
 
+                    {/* Quick Fill OTP Banner */}
+                    <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 p-2.5 rounded-xl flex items-center justify-between text-xs my-1">
+                      <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200 font-semibold">
+                        <KeyRound className="w-4 h-4 text-amber-600 shrink-0" />
+                        <span>OTP: <strong className="font-mono text-sm font-black text-amber-950 dark:text-amber-100 tracking-wider">{demoOtpHint || '123456'}</strong></span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const code = demoOtpHint || '123456';
+                          setOtpDigits(code.split(''));
+                          setErrorMsg(null);
+                        }}
+                        className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] rounded-lg shadow-2xs transition-all cursor-pointer active:scale-95"
+                      >
+                        ⚡ Quick Fill Code
+                      </button>
+                    </div>
+
                     <div className="flex justify-center gap-2 py-1">
                       {otpDigits.map((digit, idx) => (
                         <input
@@ -833,6 +911,25 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
                       </div>
                       <h4 className="font-bold text-slate-900 dark:text-white text-sm">Enter Reset OTP</h4>
                       <p className="text-slate-500 text-[11px]">Code sent to <strong>{phone}</strong></p>
+                    </div>
+
+                    {/* Quick Fill Reset OTP Banner */}
+                    <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 p-2.5 rounded-xl flex items-center justify-between text-xs my-1">
+                      <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200 font-semibold">
+                        <KeyRound className="w-4 h-4 text-amber-600 shrink-0" />
+                        <span>OTP: <strong className="font-mono text-sm font-black text-amber-950 dark:text-amber-100 tracking-wider">{demoOtpHint || '123456'}</strong></span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const code = demoOtpHint || '123456';
+                          setOtpDigits(code.split(''));
+                          setErrorMsg(null);
+                        }}
+                        className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] rounded-lg shadow-2xs transition-all cursor-pointer active:scale-95"
+                      >
+                        ⚡ Quick Fill Code
+                      </button>
                     </div>
 
                     <div className="flex justify-center gap-2 py-1">
