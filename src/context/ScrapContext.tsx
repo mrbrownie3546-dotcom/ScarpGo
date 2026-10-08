@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { checkRateLimit, recordAction, resetRateLimit } from '../lib/rateLimiter';
 import { auth as firebaseAuth, db } from '../lib/firebase';
 import {
   signInWithEmailAndPassword,
@@ -860,6 +861,16 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     fullName: string = '',
     role: UserRole = 'customer'
   ): Promise<{ success: boolean; message: string; demoOtp?: string }> => {
+    // Check Rate Limit for OTP dispatch
+    const rateCheck = checkRateLimit('OTP', phone.trim());
+    if (!rateCheck.isAllowed) {
+      return {
+        success: false,
+        message: rateCheck.errorMessage || '🛑 OTP Dispatch Throttled: Too many OTP requests. Please wait.',
+      };
+    }
+    recordAction('OTP', phone.trim());
+
     setAuthLoading(true);
     const cleanPhone = phone.trim().startsWith('+') ? phone.trim() : `+91 ${phone.trim()}`;
     const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -1067,6 +1078,16 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     phone: string,
     password: string
   ): Promise<{ success: boolean; message: string; user?: UserProfile }> => {
+    // Check LOGIN Rate Limit policy
+    const rateCheck = checkRateLimit('LOGIN', phone.trim());
+    if (!rateCheck.isAllowed) {
+      return {
+        success: false,
+        message: rateCheck.errorMessage || '🔐 Login Throttled: Too many failed login attempts.',
+      };
+    }
+    recordAction('LOGIN', phone.trim());
+
     setAuthLoading(true);
     const cleanPhone = phone.trim().startsWith('+') ? phone.trim() : `+91 ${phone.trim()}`;
     const cleanPassword = password.trim();
@@ -1125,6 +1146,7 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setAuthLoading(false);
 
       if (loggedUser) {
+        resetRateLimit('LOGIN', phone.trim());
         setCurrentUser(loggedUser);
         setActivePortal('customer');
         localStorage.setItem(STORAGE_KEYS.AUTH_USER, JSON.stringify(loggedUser));
@@ -1305,6 +1327,15 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const cleanEmail = emailInput.trim().toLowerCase();
     const cleanPass = passwordInput.trim();
 
+    const rateCheck = checkRateLimit('LOGIN', cleanEmail);
+    if (!rateCheck.isAllowed) {
+      return {
+        success: false,
+        message: rateCheck.errorMessage || '🛑 Admin Login Throttled: Too many failed login attempts.',
+      };
+    }
+    recordAction('LOGIN', cleanEmail);
+
     // Check Main Super Admin credentials (accept both correct 'scrapgo.services@gmail.com' and legacy typo 'scrapgo.servies@gmail.com')
     const isSuperAdminEmail =
       cleanEmail === 'scrapgo.services@gmail.com' || cleanEmail === 'scrapgo.servies@gmail.com';
@@ -1386,6 +1417,15 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const staffLogin = async (loginIdInput: string, passwordInput: string) => {
     const cleanInput = loginIdInput.trim().toLowerCase();
     const cleanPass = passwordInput.trim();
+
+    const rateCheck = checkRateLimit('LOGIN', cleanInput);
+    if (!rateCheck.isAllowed) {
+      return {
+        success: false,
+        message: rateCheck.errorMessage || '🛑 Staff Login Throttled: Too many failed login attempts.',
+      };
+    }
+    recordAction('LOGIN', cleanInput);
 
     // Match Initial Staff Account (Staffuser1 / Staff@88) or registered staff by email or name/id
     const matchStaff = staffMembers.find(
@@ -1594,6 +1634,12 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       account_holder: string;
     };
   }): Booking => {
+    // Throttling for booking creation
+    const rateCheck = checkRateLimit('BOOKING', bookingData.customer_phone);
+    if (!rateCheck.isAllowed) {
+      throw new Error(rateCheck.errorMessage || '🛑 Pickup Booking Rate Limit Exceeded. Please wait before creating another request.');
+    }
+    recordAction('BOOKING', bookingData.customer_phone);
     // Generate 4-digit unique OTP
     const generatedOtp = Math.floor(1000 + Math.random() * 9000).toString();
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
@@ -1918,6 +1964,12 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       priority?: 'low' | 'medium' | 'high';
     }
   ) => {
+    // Throttling for ticket / complaint registration
+    const rateCheck = checkRateLimit('COMPLAINT', currentUser?.phone || 'guest');
+    if (!rateCheck.isAllowed) {
+      throw new Error(rateCheck.errorMessage || '🛑 Complaint Ticket Throttled: Too many tickets submitted recently.');
+    }
+    recordAction('COMPLAINT', currentUser?.phone || 'guest');
     const targetBooking = bookingNumber ? aiBotLookupBooking(bookingNumber) : undefined;
     const isComplaint = options?.ticketType === 'complaint';
     const prefix = isComplaint ? 'CMP-2026' : 'TKT-2026';

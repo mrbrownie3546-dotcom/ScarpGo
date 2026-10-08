@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useScrap } from '../../context/ScrapContext';
+import { checkRateLimit, recordAction } from '../../lib/rateLimiter';
 import {
   Headphones,
   X,
@@ -287,6 +288,29 @@ export const AiSupportDrawer: React.FC<AiSupportDrawerProps> = ({
   const handleSend = (textToSend?: string) => {
     const query = (textToSend || inputVal).trim();
     if (!query) return;
+
+    // Check Rate Limiting for AI Bot Queries
+    const rateCheck = checkRateLimit('AI_CHAT');
+    if (!rateCheck.isAllowed) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `usr-${Date.now()}`,
+          sender: 'user',
+          text: query,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        },
+        {
+          id: `bot-${Date.now() + 1}`,
+          sender: 'bot',
+          text: `🛡️ **Rate Limit Notice**: Aapne rapid messages bheje hain. Automated bot attacks se defense ke liye ScrapBot queries temporary throttled hain.\n\nKripya **${rateCheck.resetInSeconds} seconds** baad dobara query poochein.`,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        },
+      ]);
+      setInputVal('');
+      return;
+    }
+    recordAction('AI_CHAT');
 
     // Handle WhatsApp link click
     if (query.toLowerCase().includes('whatsapp')) {

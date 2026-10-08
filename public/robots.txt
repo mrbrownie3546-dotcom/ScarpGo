@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://scrapgo-nh3894s92-brownie9.vercel.app/sitemap.xml

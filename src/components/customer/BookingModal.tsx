@@ -125,51 +125,58 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onClose, preselected
     setSelectedCatIds([id]);
   };
 
+  const [bookingError, setBookingError] = useState<string | null>(null);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setBookingError(null);
 
     if (!name.trim() || !phone.trim() || !address.trim()) {
-      alert('Please fill in your Name, Phone Number, and Address.');
+      setBookingError('Please fill in your Name, Phone Number, and Address.');
       return;
     }
 
-    const booking = createBooking({
-      customer_name: name,
-      customer_phone: phone,
-      pickup_address: address,
-      pickup_landmark: landmark,
-      latitude: 28.9931,
-      longitude: 77.0151,
-      preferred_date: pickupDate,
-      preferred_time_slot: timeSlot,
-      category_ids: selectedCatIds,
-      expected_scrap_items: expectedItems,
-      estimated_weight_kg: estimatedWeight,
-      payout_method: payoutMethod,
-      upi_id: payoutMethod === 'upi' ? upiId : undefined,
-      upi_qr_url: payoutMethod === 'upi' ? upiQrUrl : undefined,
-      bank_details:
-        payoutMethod === 'bank_transfer'
-          ? {
-              account_number: accountNumber,
-              ifsc_code: ifscCode,
-              account_holder: accountHolder,
-            }
-          : undefined,
-    });
-
-    setCreatedBooking(booking);
-
-    // Trigger celebration
     try {
-      confetti({
-        particleCount: 80,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#10b981', '#22c55e', '#3b82f6', '#f59e0b'],
+      const booking = createBooking({
+        customer_name: name,
+        customer_phone: phone,
+        pickup_address: address,
+        pickup_landmark: landmark,
+        latitude: 28.9931,
+        longitude: 77.0151,
+        preferred_date: pickupDate,
+        preferred_time_slot: timeSlot,
+        category_ids: selectedCatIds,
+        expected_scrap_items: expectedItems,
+        estimated_weight_kg: estimatedWeight,
+        payout_method: payoutMethod,
+        upi_id: payoutMethod === 'upi' ? upiId : undefined,
+        upi_qr_url: payoutMethod === 'upi' ? upiQrUrl : undefined,
+        bank_details:
+          payoutMethod === 'bank_transfer'
+            ? {
+                account_number: accountNumber,
+                ifsc_code: ifscCode,
+                account_holder: accountHolder,
+              }
+            : undefined,
       });
-    } catch (e) {
-      // Ignore
+
+      setCreatedBooking(booking);
+
+      // Trigger celebration
+      try {
+        confetti({
+          particleCount: 80,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#10b981', '#22c55e', '#3b82f6', '#f59e0b'],
+        });
+      } catch (e) {
+        // Ignore
+      }
+    } catch (err: any) {
+      setBookingError(err.message || 'Error scheduling pickup booking.');
     }
   };
 
@@ -270,6 +277,17 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onClose, preselected
           ) : (
             /* Booking Form */
             <form onSubmit={handleSubmit} className="space-y-5">
+              {bookingError && (
+                <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/80 border-2 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-100 flex items-center gap-3 shadow-xs">
+                  <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold shrink-0">
+                    🛡️
+                  </div>
+                  <div className="text-xs font-semibold leading-relaxed">
+                    {bookingError}
+                  </div>
+                </div>
+              )}
+
               {/* Category selector */}
               <div>
                 <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
