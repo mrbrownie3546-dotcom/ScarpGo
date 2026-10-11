@@ -743,22 +743,27 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
                     </div>
 
                     {/* Quick Fill OTP Banner */}
-                    <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 p-2.5 rounded-xl flex items-center justify-between text-xs my-1">
-                      <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200 font-semibold">
-                        <KeyRound className="w-4 h-4 text-amber-600 shrink-0" />
-                        <span>OTP: <strong className="font-mono text-sm font-black text-amber-950 dark:text-amber-100 tracking-wider">{demoOtpHint || '123456'}</strong></span>
+                    <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 p-3 rounded-xl space-y-2 text-xs my-1">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 text-amber-900 dark:text-amber-200 font-semibold">
+                          <KeyRound className="w-4 h-4 text-amber-600 shrink-0" />
+                          <span>Screen OTP: <strong className="font-mono text-sm font-black text-amber-950 dark:text-amber-100 tracking-wider">{demoOtpHint || '123456'}</strong></span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const code = demoOtpHint || '123456';
+                            setOtpDigits(code.split(''));
+                            setErrorMsg(null);
+                          }}
+                          className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] rounded-lg shadow-2xs transition-all cursor-pointer active:scale-95 flex items-center gap-1"
+                        >
+                          ⚡ Quick Fill Code
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const code = demoOtpHint || '123456';
-                          setOtpDigits(code.split(''));
-                          setErrorMsg(null);
-                        }}
-                        className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] rounded-lg shadow-2xs transition-all cursor-pointer active:scale-95"
-                      >
-                        ⚡ Quick Fill Code
-                      </button>
+                      <p className="text-[10px] text-amber-800/80 dark:text-amber-300/80 leading-snug">
+                        💡 SMS Gateway DLT registration is in Web Demo Mode. Screen OTP code is active. Click <strong>Quick Fill</strong> or enter <strong>123456</strong> to verify.
+                      </p>
                     </div>
 
                     <div className="flex justify-center gap-2 py-1">

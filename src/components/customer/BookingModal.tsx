@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { useScrap } from '../../context/ScrapContext';
 import { PayoutMethod, ScrapCategory } from '../../types/scrapgo';
 import {
@@ -29,9 +30,18 @@ import confetti from 'canvas-confetti';
 interface BookingModalProps {
   onClose: () => void;
   preselectedCategoryId?: string;
+  preselectedCatIds?: string[];
+  initialExpectedItems?: string;
+  initialEstimatedWeight?: number;
 }
 
-export const BookingModal: React.FC<BookingModalProps> = ({ onClose, preselectedCategoryId }) => {
+export const BookingModal: React.FC<BookingModalProps> = ({
+  onClose,
+  preselectedCategoryId,
+  preselectedCatIds,
+  initialExpectedItems,
+  initialEstimatedWeight,
+}) => {
   const { categories, createBooking, currentUser, serviceAreas, setOverlayActive, t, language, getCategoryName } = useScrap();
 
   useEffect(() => {
@@ -92,12 +102,16 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onClose, preselected
     }
   };
 
-  // Form states - Start empty so customer fills them manually
+  // Form states - Start empty or with initial estimate prefill
   const [selectedCatIds, setSelectedCatIds] = useState<string[]>(
-    preselectedCategoryId ? [preselectedCategoryId] : [categories[0]?.id || 'cat-iron']
+    preselectedCatIds && preselectedCatIds.length > 0
+      ? preselectedCatIds
+      : preselectedCategoryId
+      ? [preselectedCategoryId]
+      : [categories[0]?.id || 'cat-iron']
   );
-  const [expectedItems, setExpectedItems] = useState('');
-  const [estimatedWeight, setEstimatedWeight] = useState<number>(20);
+  const [expectedItems, setExpectedItems] = useState(initialExpectedItems || '');
+  const [estimatedWeight, setEstimatedWeight] = useState<number>(initialEstimatedWeight || 20);
 
   const [name, setName] = useState(currentUser?.role === 'customer' ? (currentUser.full_name || '') : '');
   const [phone, setPhone] = useState(currentUser?.role === 'customer' ? (currentUser.phone || '') : '');
@@ -116,6 +130,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onClose, preselected
   const [accountNumber, setAccountNumber] = useState('');
   const [ifscCode, setIfscCode] = useState('');
   const [accountHolder, setAccountHolder] = useState('');
+  const [notifyWhatsApp, setNotifyWhatsApp] = useState<boolean>(true);
 
   // Completed booking result
   const [createdBooking, setCreatedBooking] = useState<any | null>(null);
@@ -149,6 +164,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onClose, preselected
         category_ids: selectedCatIds,
         expected_scrap_items: expectedItems,
         estimated_weight_kg: estimatedWeight,
+        notify_whatsapp: notifyWhatsApp,
         payout_method: payoutMethod,
         upi_id: payoutMethod === 'upi' ? upiId : undefined,
         upi_qr_url: payoutMethod === 'upi' ? upiQrUrl : undefined,
@@ -163,6 +179,29 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onClose, preselected
       });
 
       setCreatedBooking(booking);
+
+      if (notifyWhatsApp) {
+        const cleanDigits = phone.replace(/\D/g, '');
+        const phoneNum = cleanDigits.length === 10 ? `91${cleanDigits}` : cleanDigits;
+        const messageText = `*ScrapGo Doorstep Pickup Confirmed!* 🚚
+----------------------------------
+📦 *Booking ID:* #${booking.booking_number}
+👤 *Name:* ${booking.customer_name}
+📱 *Phone:* ${booking.customer_phone}
+📅 *Date & Slot:* ${booking.preferred_date} (${booking.preferred_time_slot})
+📍 *Address:* ${booking.pickup_address}
+🔑 *Doorstep Verification OTP:* ${booking.pickup_otp}
+⚖️ *Est. Weight:* ${booking.estimated_weight_kg || 20} kg
+💵 *Payout Mode:* ${booking.payout_method.toUpperCase()}
+
+Our agent will arrive with an ISO certified digital scale. Zero hidden charges!
+Thank you for choosing ScrapGo! ♻️`;
+        try {
+          window.open(`https://wa.me/${phoneNum}?text=${encodeURIComponent(messageText)}`, '_blank');
+        } catch (err) {
+          console.error('Error opening WhatsApp:', err);
+        }
+      }
 
       // Trigger celebration
       try {
@@ -182,8 +221,24 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onClose, preselected
 
   const shareOnWhatsApp = () => {
     if (!createdBooking) return;
-    const msg = `Hi SCRAPGO! I scheduled scrap pickup.%0AOrder ID: ${createdBooking.booking_number}%0AName: ${createdBooking.customer_name}%0AAddress: ${createdBooking.pickup_address}%0ADate: ${createdBooking.preferred_date} (${createdBooking.preferred_time_slot})%0AEst. Weight: ${createdBooking.estimated_weight_kg} kg`;
-    window.open(`https://wa.me/918287214705?text=${msg}`, '_blank');
+    const cleanDigits = createdBooking.customer_phone.replace(/\D/g, '');
+    const phoneNum = cleanDigits.length === 10 ? `91${cleanDigits}` : cleanDigits;
+
+    const messageText = `*ScrapGo Doorstep Pickup Confirmed!* 🚚
+----------------------------------
+📦 *Booking ID:* #${createdBooking.booking_number}
+👤 *Name:* ${createdBooking.customer_name}
+📱 *Phone:* ${createdBooking.customer_phone}
+📅 *Date & Slot:* ${createdBooking.preferred_date} (${createdBooking.preferred_time_slot})
+📍 *Address:* ${createdBooking.pickup_address}
+🔑 *Doorstep Verification OTP:* ${createdBooking.pickup_otp}
+⚖️ *Est. Weight:* ${createdBooking.estimated_weight_kg || 20} kg
+💵 *Payout Mode:* ${createdBooking.payout_method.toUpperCase()}
+
+Our agent will arrive with an ISO certified digital scale. Zero hidden charges!
+Thank you for choosing ScrapGo! ♻️`;
+
+    window.open(`https://wa.me/${phoneNum}?text=${encodeURIComponent(messageText)}`, '_blank');
   };
 
   return (
@@ -215,65 +270,128 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onClose, preselected
         {/* Modal Content */}
         <div className="p-4 sm:p-6 overflow-y-auto flex-1">
           {createdBooking ? (
-            /* Confirmation Screen */
-            <div className="text-center py-4 space-y-5 animate-in fade-in duration-300">
-              <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-inner">
+            /* Confirmation Screen with Framer Motion Animations */
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.35, ease: 'easeOut' }}
+              className="text-center py-4 space-y-5"
+            >
+              <motion.div
+                initial={{ scale: 0, rotate: -20 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.1 }}
+                className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto shadow-inner"
+              >
                 <CheckCircle2 className="w-10 h-10" />
-              </div>
+              </motion.div>
 
-              <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.2 }}
+              >
+                <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/80 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
                   {t('booking_success_title', 'Pickup Scheduled Successfully! 🎉')}
                 </span>
-                <h3 className="text-xl font-black text-slate-900 mt-2">
+                <h3 className="text-xl font-black text-slate-900 dark:text-white mt-2">
                   Booking #{createdBooking.booking_number}
                 </h3>
-                <p className="text-xs text-slate-600 mt-1 max-w-md mx-auto">
+                <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 max-w-md mx-auto">
                   {t('booking_success_sub', 'Our verified driver will arrive with certified scale on the chosen date and slot.')}
                 </p>
-              </div>
+              </motion.div>
+
+              {/* AUTOMATED WHATSAPP NOTIFICATION BADGE */}
+              {createdBooking.notify_whatsapp && (
+                <motion.div
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: 0.3 }}
+                  className="bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 rounded-2xl p-4 text-left max-w-md mx-auto space-y-2 shadow-2xs"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-emerald-700 dark:text-emerald-300 font-extrabold text-xs flex items-center gap-1.5">
+                        <span className="text-base">💬</span> WhatsApp Notification Triggered
+                      </span>
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-black text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900 px-2 py-0.5 rounded uppercase">
+                      AUTO-DISPATCHED
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-snug font-medium">
+                    An automated booking confirmation &amp; doorstep OTP alert has been dispatched to <strong>{createdBooking.customer_phone}</strong> via WhatsApp.
+                  </p>
+                </motion.div>
+              )}
 
               {/* CRITICAL OTP DISPLAY FOR CUSTOMER */}
-              <div className="bg-slate-900 text-white rounded-2xl p-5 max-w-sm mx-auto shadow-xl border border-slate-800">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 15 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 0.35 }}
+                className="bg-slate-900 text-white rounded-2xl p-5 max-w-sm mx-auto shadow-xl border border-slate-800 relative overflow-hidden"
+              >
+                <div className="absolute -right-8 -bottom-8 w-24 h-24 bg-emerald-500/10 rounded-full blur-xl pointer-events-none" />
                 <span className="text-xs uppercase text-slate-400 font-semibold tracking-wider block">
                   {t('pickup_otp_label', 'Your Secret Pickup OTP:')}
                 </span>
-                <span className="font-mono text-4xl font-black text-emerald-400 tracking-widest my-2 block">
+                <motion.span
+                  initial={{ scale: 0.8 }}
+                  animate={{ scale: [0.8, 1.08, 1] }}
+                  transition={{ duration: 0.4, delay: 0.45 }}
+                  className="font-mono text-4xl font-black text-emerald-400 tracking-widest my-2 block"
+                >
                   {createdBooking.pickup_otp}
-                </span>
+                </motion.span>
                 <p className="text-[11px] text-slate-300">
                   {t('pickup_otp_note', 'Share this 4-digit code with driver ONLY after scrap weighing is done.')}
                 </p>
-              </div>
+              </motion.div>
 
               {/* Summary Pill */}
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs text-left max-w-md mx-auto space-y-1.5 text-slate-700">
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.4 }}
+                className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 text-xs text-left max-w-md mx-auto space-y-1.5 text-slate-700 dark:text-slate-300"
+              >
                 <div><strong>Address: </strong>{createdBooking.pickup_address}</div>
                 <div><strong>Contact: </strong>{createdBooking.customer_name} ({createdBooking.customer_phone})</div>
                 <div><strong>Slot: </strong>{createdBooking.preferred_date} ({createdBooking.preferred_time_slot})</div>
                 <div><strong>Payout Preference: </strong>
-                  <span className="font-semibold uppercase text-emerald-700">
+                  <span className="font-semibold uppercase text-emerald-700 dark:text-emerald-400">
                     {createdBooking.payout_method} {createdBooking.upi_id ? `(${createdBooking.upi_id})` : ''}
                   </span>
                 </div>
-              </div>
+              </motion.div>
 
-              <div className="flex flex-col sm:flex-row gap-2.5 justify-center max-w-md mx-auto pt-2">
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.45 }}
+                className="flex flex-col sm:flex-row gap-2.5 justify-center max-w-md mx-auto pt-2"
+              >
                 <button
                   onClick={shareOnWhatsApp}
                   className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-3 px-4 rounded-xl flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
                 >
                   <Share2 className="w-4 h-4" />
-                  <span>{t('share_whatsapp_btn', 'Share Details on WhatsApp')}</span>
+                  <span>{t('share_whatsapp_btn', 'Open Confirmation in WhatsApp 💬')}</span>
                 </button>
                 <button
                   onClick={onClose}
-                  className="px-5 py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                  className="px-5 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
                 >
                   {t('done_btn', 'Done & Return Home')}
                 </button>
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
           ) : (
             /* Booking Form */
             <form onSubmit={handleSubmit} className="space-y-5">
@@ -683,6 +801,39 @@ export const BookingModal: React.FC<BookingModalProps> = ({ onClose, preselected
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* WhatsApp Notification Toggle */}
+              <div className="p-3.5 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 flex items-center justify-between gap-3 shadow-2xs">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-lg shrink-0 shadow-xs">
+                    💬
+                  </div>
+                  <div>
+                    <span className="text-xs font-extrabold text-slate-900 dark:text-white block">
+                      Notify via WhatsApp 💬
+                    </span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium block">
+                      Get instant confirmation, live driver tracking link, &amp; scale receipts on WhatsApp ({phone || 'registered phone'})
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setNotifyWhatsApp(!notifyWhatsApp)}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    notifyWhatsApp ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-slate-700'
+                  }`}
+                  role="switch"
+                  aria-checked={notifyWhatsApp}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      notifyWhatsApp ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
               </div>
 
               {/* Submit CTA */}

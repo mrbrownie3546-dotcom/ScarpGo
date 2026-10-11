@@ -90,6 +90,7 @@ export interface Booking {
   category_ids: string[];
   expected_scrap_items: string;
   estimated_weight_kg?: number;
+  notify_whatsapp?: boolean;
 
   // Status & Tracking
   status: BookingStatus;

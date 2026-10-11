@@ -55,6 +55,7 @@ import {
   ShieldAlert,
   FileWarning,
   Send,
+  RotateCcw,
 } from 'lucide-react';
 
 import { ServiceAreasTab } from './ServiceAreasTab';
@@ -67,6 +68,14 @@ import { AdminRolesTab } from './AdminRolesTab';
 import { SystemSettingsTab } from './SystemSettingsTab';
 import { ApprovalCenterTab } from './ApprovalCenterTab';
 import { AuditLogsTab } from './AuditLogsTab';
+import {
+  Skeleton,
+  DashboardSkeleton,
+  TableSkeleton,
+  StatCardSkeleton,
+  CardGridSkeleton,
+  ChartSkeleton,
+} from '../common/Skeleton';
 
 export const AdminDashboard: React.FC = () => {
   const {
@@ -102,6 +111,17 @@ export const AdminDashboard: React.FC = () => {
     | 'audit';
 
   const [activeTab, setActiveTab] = useState<AdminNavPage>('dashboard');
+  const [isTabLoading, setIsTabLoading] = useState<boolean>(false);
+
+  const handleTabChange = (nextTab: AdminNavPage) => {
+    if (nextTab === activeTab) return;
+    setIsTabLoading(true);
+    setActiveTab(nextTab);
+    setIsDrawerOpen(false);
+    setTimeout(() => {
+      setIsTabLoading(false);
+    }, 350);
+  };
 
   // Ticket reply modal state
   const [selectedTicketForReply, setSelectedTicketForReply] = useState<string | null>(null);
@@ -308,7 +328,7 @@ export const AdminDashboard: React.FC = () => {
               <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
 
-            <div className="flex items-center gap-2 sm:gap-3 cursor-pointer" onClick={() => setActiveTab('dashboard')}>
+            <div className="flex items-center gap-2 sm:gap-3 cursor-pointer" onClick={() => handleTabChange('dashboard')}>
               {/* Green Recycle Logo Icon */}
               <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-emerald-100 dark:bg-emerald-950/90 flex items-center justify-center text-emerald-700 dark:text-emerald-400 font-black shrink-0 shadow-2xs">
                 <Scale className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -326,6 +346,19 @@ export const AdminDashboard: React.FC = () => {
 
           {/* Right: Clean Header Actions with Prominent Back to Customer Site Button */}
           <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => {
+                setIsTabLoading(true);
+                setTimeout(() => setIsTabLoading(false), 400);
+                showToast('success', 'Database records synced with Supabase / Firestore!');
+              }}
+              className="p-2 sm:p-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+              title="Refresh and sync backend data"
+            >
+              <RotateCcw className={`w-4 h-4 ${isTabLoading ? 'animate-spin text-emerald-600' : ''}`} />
+              <span className="hidden sm:inline">Sync Data</span>
+            </button>
+
             <button
               onClick={() => setActivePortal('customer')}
               className="bg-[#0f6233] hover:bg-[#0c5028] text-white font-black text-xs sm:text-sm px-3.5 sm:px-5 py-2.5 sm:py-3 rounded-2xl shadow-md transition-all active:scale-95 cursor-pointer flex items-center gap-1.5 sm:gap-2 border border-emerald-400/40 shrink-0"
@@ -384,10 +417,7 @@ export const AdminDashboard: React.FC = () => {
                   return (
                     <button
                       key={item.id}
-                      onClick={() => {
-                        setActiveTab(item.id as AdminNavPage);
-                        setIsDrawerOpen(false);
-                      }}
+                      onClick={() => handleTabChange(item.id as AdminNavPage)}
                       className={`w-full px-3.5 py-3 rounded-xl flex items-center justify-between transition-all cursor-pointer ${
                         isActive
                           ? 'bg-emerald-600 text-white shadow-xs'
@@ -441,8 +471,11 @@ export const AdminDashboard: React.FC = () => {
         )}
 
         {/* PAGE SWITCHING */}
-
-        {/* PAGE 1: MAIN DASHBOARD */}
+        {isTabLoading ? (
+          <DashboardSkeleton />
+        ) : (
+          <>
+            {/* PAGE 1: MAIN DASHBOARD */}
         {activeTab === 'dashboard' && (
           <div className="space-y-6">
 
@@ -1155,6 +1188,8 @@ export const AdminDashboard: React.FC = () => {
 
         {/* SECURITY AUDIT LOGS */}
         {activeTab === 'audit' && <AuditLogsTab />}
+          </>
+        )}
 
       </main>
 

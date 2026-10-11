@@ -24,6 +24,12 @@ import {
 } from 'lucide-react';
 import { OtpVerificationModal } from './OtpVerificationModal';
 import { DigitalScaleCalculator } from './DigitalScaleCalculator';
+import {
+  Skeleton,
+  StatCardSkeleton,
+  CardGridSkeleton,
+  TableSkeleton,
+} from '../common/Skeleton';
 
 export const StaffDashboard: React.FC = () => {
   const {
@@ -35,6 +41,16 @@ export const StaffDashboard: React.FC = () => {
   } = useScrap();
 
   const [activeTab, setActiveTab] = useState<'assigned' | 'active' | 'completed'>('assigned');
+  const [isTabLoading, setIsTabLoading] = useState<boolean>(false);
+
+  const handleTabChange = (nextTab: 'assigned' | 'active' | 'completed') => {
+    if (nextTab === activeTab) return;
+    setIsTabLoading(true);
+    setActiveTab(nextTab);
+    setTimeout(() => {
+      setIsTabLoading(false);
+    }, 300);
+  };
   const [isMobileFrame, setIsMobileFrame] = useState(false);
 
   // Modals
@@ -164,7 +180,7 @@ export const StaffDashboard: React.FC = () => {
       <div className="flex items-center justify-between gap-2 border-b border-slate-200 pb-2">
         <div className="flex items-center gap-2 text-xs font-bold">
           <button
-            onClick={() => setActiveTab('assigned')}
+            onClick={() => handleTabChange('assigned')}
             className={`px-3.5 py-1.5 rounded-lg transition-colors ${
               activeTab === 'assigned'
                 ? 'bg-amber-600 text-white shadow-xs'
@@ -174,7 +190,7 @@ export const StaffDashboard: React.FC = () => {
             Assigned Pickups ({pendingAssigned.length + activeOrEnRoute.length})
           </button>
           <button
-            onClick={() => setActiveTab('active')}
+            onClick={() => handleTabChange('active')}
             className={`px-3.5 py-1.5 rounded-lg transition-colors ${
               activeTab === 'active'
                 ? 'bg-amber-600 text-white shadow-xs'
@@ -184,7 +200,7 @@ export const StaffDashboard: React.FC = () => {
             In Progress ({activeOrEnRoute.length})
           </button>
           <button
-            onClick={() => setActiveTab('completed')}
+            onClick={() => handleTabChange('completed')}
             className={`px-3.5 py-1.5 rounded-lg transition-colors ${
               activeTab === 'completed'
                 ? 'bg-amber-600 text-white shadow-xs'
@@ -207,7 +223,10 @@ export const StaffDashboard: React.FC = () => {
       </div>
 
       {/* Bookings Stream */}
-      <div className="space-y-4">
+      {isTabLoading ? (
+        <CardGridSkeleton count={3} cols="grid-cols-1" />
+      ) : (
+        <div className="space-y-4">
         {displayList.length === 0 ? (
           <div className="bg-white rounded-2xl p-8 text-center border border-slate-200 text-slate-500">
             <Truck className="w-10 h-10 mx-auto text-slate-300 mb-2" />
@@ -449,6 +468,7 @@ export const StaffDashboard: React.FC = () => {
           })
         )}
       </div>
+      )}
     </div>
   );
 

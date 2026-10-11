@@ -53,6 +53,8 @@ import { AiSupportDrawer } from './AiSupportDrawer';
 import { BottomNavBar } from '../common/BottomNavBar';
 import { AuthModal } from '../common/AuthModal';
 import { CustomerAccountModal } from './CustomerAccountModal';
+import { CustomerDashboard } from './CustomerDashboard';
+import { ScrapPriceEstimator } from './ScrapPriceEstimator';
 import { useKeyboardStatus } from '../../hooks/useKeyboardStatus';
 
 export const CustomerHome: React.FC = () => {
@@ -73,11 +75,25 @@ export const CustomerHome: React.FC = () => {
   // Modals & Drawers state
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [preselectedCategoryId, setPreselectedCategoryId] = useState<string | undefined>(undefined);
+  const [bookingEstimateData, setBookingEstimateData] = useState<{
+    catIds?: string[];
+    expectedItems?: string;
+    estimatedWeight?: number;
+  } | null>(null);
   const [selectedTrackingBooking, setSelectedTrackingBooking] = useState<Booking | null>(null);
   const [showAiDrawer, setShowAiDrawer] = useState(false);
   const [aiDrawerDefaultTab, setAiDrawerDefaultTab] = useState<'chat' | 'complaint' | 'history'>('chat');
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
+
+  const handleSchedulePickupFromEstimator = (
+    catIds: string[],
+    expectedItems: string,
+    estimatedWeight: number
+  ) => {
+    setBookingEstimateData({ catIds, expectedItems, estimatedWeight });
+    setShowBookingModal(true);
+  };
 
   // Search & Filter state for Scrap Rates
   const [searchQuery, setSearchQuery] = useState('');
@@ -498,6 +514,20 @@ export const CustomerHome: React.FC = () => {
     return matchesCategory && matchesSearch;
   });
 
+  if (showAccountModal) {
+    return (
+      <CustomerDashboard
+        onBackToHome={() => setShowAccountModal(false)}
+        onOpenBooking={() => handleOpenBooking()}
+        onSelectTrackingBooking={(booking) => setSelectedTrackingBooking(booking)}
+        onOpenLogin={() => {
+          setShowAccountModal(false);
+          setShowAuthModal(true);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 pb-28 transition-colors">
       {/* HERO BANNER SECTION (Bright, Light, Soft Neumorphic Style) */}
@@ -760,6 +790,11 @@ export const CustomerHome: React.FC = () => {
         )}
       </AnimatePresence>
 
+      {/* SCRAP PRICE ESTIMATOR SECTION */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <ScrapPriceEstimator onSchedulePickup={handleSchedulePickupFromEstimator} />
+      </section>
+
       {/* SCRAP CATEGORIES & TODAY'S RATES SECTION (Clean Minimalist Design) */}
       <section id="rates-section" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
         {/* Compact Search & Category Filter Bar */}
@@ -931,57 +966,7 @@ export const CustomerHome: React.FC = () => {
         </div>
       </section>
 
-      {/* GREEN ENVIRONMENTAL IMPACT CALCULATOR (Light Vibrant Theme) */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-gradient-to-br from-[#ebf5ee] via-[#f2faf4] to-[#e4f4ea] dark:from-slate-900 dark:via-slate-950 dark:to-slate-900 rounded-3xl p-6 sm:p-10 text-slate-900 dark:text-white shadow-xl relative overflow-hidden border border-emerald-200/80 dark:border-slate-800">
-          <div className="grid lg:grid-cols-12 gap-8 items-center relative z-10">
-            <div className="lg:col-span-6 space-y-4">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-600/10 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 text-xs font-extrabold border border-emerald-300/60 dark:border-emerald-700">
-                <Leaf className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <span>Environmental Savings Meter</span>
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
-                Your Recycling Makes a Real Difference 🌱
-              </h2>
-              <p className="text-slate-600 dark:text-slate-300 text-xs sm:text-sm leading-relaxed font-medium">
-                By selling scrap to certified recyclers instead of sending it to landfills, you help reduce carbon emissions and conserve natural resources.
-              </p>
 
-              <div className="pt-2">
-                <label className="text-xs font-extrabold text-slate-800 dark:text-slate-200 block mb-2">
-                  Total Scrap Sold / Recycled ({ecoScrapKg} kg)
-                </label>
-                <input
-                  type="range"
-                  min="10"
-                  max="500"
-                  step="10"
-                  value={ecoScrapKg}
-                  onChange={(e) => setEcoScrapKg(Number(e.target.value))}
-                  className="w-full accent-emerald-600 bg-slate-200 dark:bg-slate-800 h-2.5 rounded-lg cursor-pointer"
-                />
-              </div>
-            </div>
-
-            <div className="lg:col-span-6 grid grid-cols-3 gap-3">
-              <div className="bg-white/90 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl p-4 border border-emerald-200/80 dark:border-emerald-500/30 text-center space-y-1 shadow-xs">
-                <div className="text-emerald-700 dark:text-emerald-400 text-2xl sm:text-3xl font-black">{co2SavedKg} kg</div>
-                <div className="text-[11px] font-extrabold text-slate-700 dark:text-slate-300">CO₂ Emissions Saved</div>
-              </div>
-
-              <div className="bg-white/90 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl p-4 border border-emerald-200/80 dark:border-emerald-500/30 text-center space-y-1 shadow-xs">
-                <div className="text-emerald-700 dark:text-emerald-400 text-2xl sm:text-3xl font-black">{treesSaved}</div>
-                <div className="text-[11px] font-extrabold text-slate-700 dark:text-slate-300">Trees Preserved</div>
-              </div>
-
-              <div className="bg-white/90 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl p-4 border border-emerald-200/80 dark:border-emerald-500/30 text-center space-y-1 shadow-xs">
-                <div className="text-emerald-700 dark:text-emerald-400 text-2xl sm:text-3xl font-black">{waterSavedLiters} L</div>
-                <div className="text-[11px] font-extrabold text-slate-700 dark:text-slate-300">Water Saved</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* SERVICE AREAS & COVERAGE */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-4">
@@ -1384,6 +1369,24 @@ export const CustomerHome: React.FC = () => {
         </div>
       </footer>
 
+      {/* Hidden Triggers for Header/Nav Clicks */}
+      <button
+        id="pickup-modal-trigger"
+        className="hidden"
+        onClick={() => handleOpenBooking()}
+      />
+      <button
+        id="customer-account-trigger"
+        className="hidden"
+        onClick={() => {
+          if (isCustomerLoggedIn) {
+            setShowAccountModal(true);
+          } else {
+            setShowAuthModal(true);
+          }
+        }}
+      />
+
       {/* BOTTOM NAV BAR */}
       <BottomNavBar
         onOpenBooking={() => handleOpenBooking()}
@@ -1460,8 +1463,14 @@ export const CustomerHome: React.FC = () => {
 
       {showBookingModal && (
         <BookingModal
-          onClose={() => setShowBookingModal(false)}
+          onClose={() => {
+            setShowBookingModal(false);
+            setBookingEstimateData(null);
+          }}
           preselectedCategoryId={preselectedCategoryId}
+          preselectedCatIds={bookingEstimateData?.catIds}
+          initialExpectedItems={bookingEstimateData?.expectedItems}
+          initialEstimatedWeight={bookingEstimateData?.estimatedWeight}
         />
       )}
 

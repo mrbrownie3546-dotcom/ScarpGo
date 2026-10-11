@@ -182,6 +182,7 @@ interface ScrapContextType {
     category_ids: string[];
     expected_scrap_items: string;
     estimated_weight_kg?: number;
+    notify_whatsapp?: boolean;
     payout_method: PayoutMethod;
     upi_id?: string;
     upi_qr_url?: string;
@@ -198,6 +199,7 @@ interface ScrapContextType {
   staffStartJourney: (bookingId: string) => void;
   staffMarkArrived: (bookingId: string) => void;
   staffCancelBooking: (bookingId: string, reason?: string) => void;
+  cancelBookingCustomer: (bookingId: string, reason?: string) => { success: boolean; message: string };
   staffVerifyOtp: (bookingId: string, enteredOtp: string) => { success: boolean; message: string };
   staffCompleteWeighing: (
     bookingId: string,
@@ -1776,6 +1778,7 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     category_ids: string[];
     expected_scrap_items: string;
     estimated_weight_kg?: number;
+    notify_whatsapp?: boolean;
     payout_method: PayoutMethod;
     upi_id?: string;
     upi_qr_url?: string;
@@ -1813,6 +1816,7 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       category_ids: bookingData.category_ids,
       expected_scrap_items: bookingData.expected_scrap_items,
       estimated_weight_kg: bookingData.estimated_weight_kg || 20,
+      notify_whatsapp: bookingData.notify_whatsapp ?? true,
       status: 'pending',
       pickup_otp: generatedOtp,
       otp_verified: false,
@@ -1954,6 +1958,34 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       'all',
       bookingId
     );
+  };
+
+  // Customer cancels booking
+  const cancelBookingCustomer = (bookingId: string, reason?: string): { success: boolean; message: string } => {
+    const booking = bookings.find((b) => b.id === bookingId);
+    if (!booking) return { success: false, message: 'Booking not found.' };
+
+    if (booking.status === 'completed') {
+      return { success: false, message: 'Cannot cancel a completed booking.' };
+    }
+
+    setBookings((prev) =>
+      prev.map((b) =>
+        b.id === bookingId
+          ? { ...b, status: 'cancelled', updated_at: new Date().toISOString() }
+          : b
+      )
+    );
+
+    addNotification(
+      'Pickup Request Cancelled ❌',
+      `Booking #${booking.booking_number} was cancelled by customer. Reason: ${reason || 'Customer request'}`,
+      'booking',
+      'all',
+      bookingId
+    );
+
+    return { success: true, message: `Booking #${booking.booking_number} cancelled successfully.` };
   };
 
   // Staff verifies customer OTP
@@ -3405,6 +3437,7 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         staffStartJourney,
         staffMarkArrived,
         staffCancelBooking,
+        cancelBookingCustomer,
         staffVerifyOtp,
         staffCompleteWeighing,
         submitPickupRating,

@@ -294,22 +294,27 @@ export const PhoneAuthentication: React.FC<PhoneAuthenticationProps> = ({
           </div>
 
           {/* Demo OTP Banner with 1-Click Quick Fill */}
-          <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-200 text-xs font-semibold flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <KeyRound className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>Verification Code: <strong className="font-mono text-sm font-black tracking-widest text-amber-950 dark:text-amber-100">{demoOtp || '123456'}</strong></span>
+          <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-200 text-xs space-y-2">
+            <div className="flex items-center justify-between font-semibold">
+              <div className="flex items-center gap-2">
+                <KeyRound className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>Verification Code: <strong className="font-mono text-sm font-black tracking-widest text-amber-950 dark:text-amber-100">{demoOtp || '123456'}</strong></span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const code = demoOtp || '123456';
+                  setOtpDigits(code.split(''));
+                  setErrorMsg(null);
+                }}
+                className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] rounded-lg shadow-2xs transition-all cursor-pointer active:scale-95 flex items-center gap-1"
+              >
+                ⚡ Quick Fill
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                const code = demoOtp || '123456';
-                setOtpDigits(code.split(''));
-                setErrorMsg(null);
-              }}
-              className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] rounded-lg shadow-2xs transition-all cursor-pointer active:scale-95"
-            >
-              ⚡ Quick Fill
-            </button>
+            <p className="text-[10px] text-amber-800/80 dark:text-amber-300/80 leading-snug">
+              💡 Real SMS delivery requires paid SMS Gateway (Fast2SMS/MSG91). Currently active in Web Demo Mode. Click <strong>Quick Fill</strong> or enter <strong>123456</strong>.
+            </p>
           </div>
 
           <div>
