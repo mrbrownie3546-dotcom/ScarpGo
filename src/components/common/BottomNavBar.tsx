@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Truck, MessageCircle, User } from 'lucide-react';
+import { Home, Truck, MessageCircle, PackageSearch } from 'lucide-react';
 import { useScrap } from '../../context/ScrapContext';
 import { useKeyboardStatus } from '../../hooks/useKeyboardStatus';
 
@@ -52,7 +52,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
 
   return (
     <div className="fixed bottom-3 left-1/2 -translate-x-1/2 z-30 w-[94%] max-w-md pointer-events-auto animate-in fade-in slide-in-from-bottom-3 duration-200">
-      <div className="bg-[#f4f7fb]/95 backdrop-blur-md rounded-[28px] p-2 shadow-[8px_8px_25px_rgba(166,180,200,0.35),-8px_-8px_25px_rgba(255,255,255,0.95)] border border-white/80 flex items-center justify-around ring-1 ring-slate-900/5">
+      <div className="bg-[#f4f7fb] rounded-[28px] p-2 shadow-[8px_8px_25px_rgba(166,180,200,0.35),-8px_-8px_25px_rgba(255,255,255,0.95)] border border-white/80 flex items-center justify-around ring-1 ring-slate-900/5">
         {/* 1. HOME BUTTON */}
         <button
           onClick={handleHomeClick}
@@ -106,13 +106,13 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
           </span>
         </button>
 
-        {/* 5. ACCOUNT BUTTON (Phone OTP Login & Profile) */}
+        {/* 5. TRACK STATUS BUTTON (WhatsApp status check) */}
         <button
           onClick={onOpenAccount}
           className="flex flex-col items-center gap-1 group py-1 px-2.5 transition-transform active:scale-95 relative"
         >
           <div className="w-10 h-10 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center transition-all group-hover:bg-purple-200">
-            <User className="w-5 h-5" />
+            <PackageSearch className="w-5 h-5" />
             {openTicketsCount > 0 && (
               <span className="absolute -top-1 -right-1 bg-rose-600 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                 {openTicketsCount}
