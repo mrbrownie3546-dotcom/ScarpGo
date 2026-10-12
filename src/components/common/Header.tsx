@@ -65,7 +65,7 @@ export const Header: React.FC = () => {
                   className="bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs sm:text-sm px-3.5 sm:px-4 py-2.5 rounded-xl border border-slate-200/80 dark:border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer shrink-0 active:scale-95"
                 >
                   <User className="w-4 h-4 text-emerald-600" />
-                  <span className="hidden sm:inline">My Dashboard</span>
+                  <span className="hidden sm:inline">Track Status</span>
                 </button>
 
                 <button
