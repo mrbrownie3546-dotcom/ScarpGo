@@ -342,6 +342,7 @@ export interface AdminUser {
   last_login?: string;
   permissions_summary?: string;
   must_change_password?: boolean;
+  password_hash?: string;
 }
 
 export interface StaffMember {
@@ -368,6 +369,7 @@ export interface StaffMember {
   created_at: string;
   last_active?: string;
   must_change_password?: boolean;
+  password_hash?: string;
 }
 
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'cancelled' | 'expired';
