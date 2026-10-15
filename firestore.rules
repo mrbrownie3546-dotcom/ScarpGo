@@ -75,5 +75,26 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Public Booking Tracking (guest status check by Booking ID + phone)
+    // Sirf safe status fields hain is collection me - koi address/OTP/UPI nahi.
+    match /tracking/{bookingNumber} {
+      allow read: if true;
+      allow create, update: if true; // guest booking create + staff devices (custom auth) dono ke liye
+      allow delete: if false;
+    }
+
+    // Customer Reviews (public read, koi bhi submit kar sakta hai)
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if false;
+    }
+
+    // FAQ (public read)
+    match /faq/{faqId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
   }
 }
