@@ -413,9 +413,8 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (typeof window !== 'undefined') {
       try {
         const saved = localStorage.getItem('scrapgo_language_pref');
-        if (saved === 'hindi' || saved === 'hinglish' || saved === 'english') {
-          return saved as Language;
-        }
+        if (saved === 'hindi' || saved === 'hinglish') return 'hindi';
+        if (saved === 'english') return 'english';
       } catch (e) {
         // fallback
       }
@@ -490,7 +489,7 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return queryPortal;
       }
 
-      // 2. Check subdomain e.g. admin.scrapgo.in or staff.scrapgo.in
+      // 2. Check subdomain e.g. admin.scraphouse.in or staff.scraphouse.in
       const host = window.location.hostname.toLowerCase();
       if (host.startsWith('admin.')) return 'admin';
       if (host.startsWith('staff.')) return 'staff';
@@ -1573,7 +1572,7 @@ export const ScrapProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
 
     // Sirf email se match (ya purana demo alias staffuser1)
-    const lookupEmail = cleanInput === 'staffuser1' ? 'staffuser1@scrapgo.in' : cleanInput;
+    const lookupEmail = cleanInput === 'staffuser1' ? 'staffuser1@scraphouse.in' : cleanInput;
     const matchStaff = staffMembers.find((s) => s.email.toLowerCase() === lookupEmail);
 
     let verified = false;
