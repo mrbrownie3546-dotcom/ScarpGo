@@ -58,7 +58,7 @@ export const verifyPassword = async (pwd: string, stored: string | undefined | n
 
 // Super-admin master credential check. Only the salted PBKDF2 hash of the master
 // password lives here - the password itself is nowhere in the code.
-export const MASTER_PASSWORD_HASH = 'pbkdf2$100000$0939c156470d9ba57ab05f091ef2bd32$6b9d739619ac096f5a014f9dcff0342ba4ac74afc9e859b0ed7600433a988fca';
+export const MASTER_PASSWORD_HASH = 'pbkdf2\$100000\$cf8d441a62d7ddf3547f2f35ecf40b12\$94690546ea46f3195f163819beed6b1b9f6f2f8e55dc81f6a349a1154677c9da';
 
 export const verifyMasterPassword = async (pwd: string): Promise<boolean> => {
   return verifyPassword(pwd, MASTER_PASSWORD_HASH);
