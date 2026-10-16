@@ -1,6 +1,0 @@
-{
-  "name": "ScrapGo – Scrap Pickup in Haryana & Sonipat",
-  "description": "ScrapGo provides free doorstep scrap pickup in Haryana and Sonipat. Sell iron, copper, aluminium, brass, paper, plastic, e-waste and other recyclable scrap.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
