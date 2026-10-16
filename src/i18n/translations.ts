@@ -340,8 +340,8 @@ export const TRANSLATIONS: Translations = {
     hindi: 'बुक करें',
   },
   nav_chat: {
-    english: 'Chat',
-    hindi: 'चैट',
+    english: 'Support',
+    hindi: 'सहायता',
   },
   nav_account: {
     english: 'Account',
@@ -508,8 +508,8 @@ export const TRANSLATIONS: Translations = {
     hindi: 'यह 4-अंकों का ओटीपी ड्राइवर को केवल कबाड़ तौल पूरा होने के बाद ही बताएं।',
   },
   status_pending: {
-    english: 'Pickup Requested (Allocating Agent)',
-    hindi: 'पिकअप अनुरोध प्राप्त (एजेंट आवंटित हो रहा है)',
+    english: 'Pickup Requested',
+    hindi: 'पिकअप रिक्वेस्ट मिल गई',
   },
   status_assigned: {
     english: 'Driver Assigned & Scheduled',
