@@ -60,6 +60,12 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ---- Tickets/complaints: guest sirf create; read/update sirf admin ----
+    match /tickets/{ticketId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
     // ---- Reviews: public read + create ----
     match /reviews/{reviewId} {
       allow read: if true;
