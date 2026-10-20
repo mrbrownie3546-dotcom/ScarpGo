@@ -1,0 +1,55 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default: sab kuch band
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Bookings: customer sirf NAYI booking bhej sakta hai (create only).
+    // Poori booking me address/UPI/OTP hota hai - isliye read kisi ke liye nahi.
+    // Guest status check sirf 'tracking' collection se hota hai.
+    match /bookings/{bookingId} {
+      allow create: if true;
+      allow read, update, delete: if false;
+    }
+
+    // Public tracking mirror: sirf SAFE status fields (koi address/OTP/UPI nahi).
+    // Guest Track Status (Booking ID + phone) yahi se chalti hai.
+    // Staff devices bina Firebase login ke status mirror karte hain, isliye
+    // create/update open hai - is collection me kabhi sensitive data mat daalo.
+    match /tracking/{bookingNumber} {
+      allow read: if true;
+      allow create, update: if true;
+      allow delete: if false;
+    }
+
+    // Reviews: koi bhi padh sakta hai / likh sakta hai, badal ya delete nahi
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if false;
+    }
+
+    // FAQ: public read only
+    match /faq/{faqId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Rates/categories & service areas: public read only
+    match /categories/{catId} {
+      allow read: if true;
+      allow write: if false;
+    }
+    match /service_areas/{areaId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // users / payouts / audit_logs: poori tarah band (default deny).
+    // Customer login ka system hi nahi hai, isliye kisi ko signed-in
+    // read ki zaroorat nahi.
+  }
+}
