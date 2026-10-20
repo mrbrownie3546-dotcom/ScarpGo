@@ -7,38 +7,73 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // Bookings: customer sirf NAYI booking bhej sakta hai (create only).
-    // Poori booking me address/UPI/OTP hota hai - isliye read kisi ke liye nahi.
-    // Guest status check sirf 'tracking' collection se hota hai.
-    match /bookings/{bookingId} {
-      allow create: if true;
-      allow read, update, delete: if false;
+    // ---- Role helpers (appUsers/{uid} doc me 'role' hota hai) ----
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function userRole() {
+      return get(/databases/$(database)/documents/appUsers/$(request.auth.uid)).data.role;
+    }
+    function hasRoleDoc() {
+      return isSignedIn() && exists(/databases/$(database)/documents/appUsers/$(request.auth.uid));
+    }
+    function isAdmin() {
+      return hasRoleDoc() && userRole() == 'admin';
+    }
+    function isStaffOrAdmin() {
+      return hasRoleDoc() && (userRole() == 'admin' || userRole() == 'staff');
     }
 
-    // Public tracking mirror: sirf SAFE status fields (koi address/OTP/UPI nahi).
-    // Guest Track Status (Booking ID + phone) yahi se chalti hai.
-    // Staff devices bina Firebase login ke status mirror karte hain, isliye
-    // create/update open hai - is collection me kabhi sensitive data mat daalo.
+    // ---- Roles: admin likhta hai, user apna doc padh sakta hai ----
+    // Pehla admin doc Firebase console se manually banta hai (bootstrap).
+    match /appUsers/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ---- Staff profiles: admin manage karta hai, staff apna padh sakta hai ----
+    match /staffProfiles/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ---- Admin profiles: admin manage, khud read ----
+    match /adminProfiles/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ---- Bookings: guest sirf create; read/update sirf staff/admin ----
+    // Poori booking me address/UPI/OTP hota hai - public read kabhi nahi.
+    match /bookings/{bookingId} {
+      allow create: if true;
+      allow read: if isStaffOrAdmin();
+      allow update: if isStaffOrAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ---- Public tracking mirror: sirf SAFE status fields ----
+    // Guest Track Status yahi se chalti hai. Kabhi sensitive data mat daalo.
     match /tracking/{bookingNumber} {
       allow read: if true;
       allow create, update: if true;
       allow delete: if false;
     }
 
-    // Reviews: koi bhi padh sakta hai / likh sakta hai, badal ya delete nahi
+    // ---- Reviews: public read + create ----
     match /reviews/{reviewId} {
       allow read: if true;
       allow create: if true;
       allow update, delete: if false;
     }
 
-    // FAQ: public read only
+    // ---- FAQ: public read only ----
     match /faq/{faqId} {
       allow read: if true;
       allow write: if false;
     }
 
-    // Rates/categories & service areas: public read only
+    // ---- Rates/categories & service areas: public read only ----
     match /categories/{catId} {
       allow read: if true;
       allow write: if false;
@@ -48,8 +83,6 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // users / payouts / audit_logs: poori tarah band (default deny).
-    // Customer login ka system hi nahi hai, isliye kisi ko signed-in
-    // read ki zaroorat nahi.
+    // users / payouts / audit_logs: default deny (abhi use nahi hote)
   }
 }
