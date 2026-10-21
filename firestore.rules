@@ -59,7 +59,10 @@ service cloud.firestore {
     match /tracking/{bookingNumber} {
       allow get: if true;
       allow list: if false;
-      allow create, update: if true;
+      // Guest apni nayi booking ka pehla mirror doc create kar sakta hai,
+      // par status badalna sirf Firebase-se logged-in staff/admin kar sakta hai.
+      allow create: if true;
+      allow update: if isStaffOrAdmin();
       allow delete: if false;
     }
 
@@ -95,3 +98,4 @@ service cloud.firestore {
     // users / payouts / audit_logs: default deny (abhi use nahi hote)
   }
 }
+
