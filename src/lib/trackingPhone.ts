@@ -15,3 +15,14 @@ export const phoneHashForBooking = async (phone: string, bookingNumber: string):
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
 };
+
+
+// Spam-protection key: SHA-256 of sirf normalized phone digits (booking number
+// ke bina). Ek phone ke liye hamesha same - cooldown aur block list isi par
+// kaam karti hai. Reverse karna practically impossible.
+export const phoneKeyFor = async (phone: string): Promise<string> => {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(normalizePhoneDigits(phone)));
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+};
