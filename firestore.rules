@@ -36,7 +36,7 @@ service cloud.firestore {
           'category_ids', 'expected_scrap_items', 'estimated_weight_kg',
           'notify_whatsapp', 'status', 'pickup_otp', 'otp_verified',
           'payout_method', 'upi_id', 'upi_qr_url', 'bank_details',
-          'payout_status', 'created_at', 'updated_at'
+          'payout_status', 'created_at', 'updated_at', 'phone_key'
         ])
         && d.keys().hasAll([
           'id', 'booking_number', 'customer_id', 'customer_name', 'customer_phone',
@@ -79,7 +79,23 @@ service cloud.firestore {
            ))
         && d.payout_status == 'pending_approval'
         && d.created_at is string && d.created_at.size() <= 40
-        && d.updated_at is string && d.updated_at.size() <= 40;
+        && d.updated_at is string && d.updated_at.size() <= 40
+        // Spam protection: naye app versions phone ka SHA-256 key bhejte hain.
+        // Purane cached app ke liye optional rakha hai (rules pehle publish ho
+        // sakti hain, koi version kabhi break nahi hota). Naye app me key hamesha
+        // hoti hai, isliye cooldown+block wahan hamesha lagte hain.
+        && ( !d.keys().hasAny(['phone_key']) || (
+             d.phone_key is string && d.phone_key.size() == 64
+             // (1) Block list: admin ne number block kiya to turant reject.
+             && !exists(/databases/$(database)/documents/blocked_phones/$(request.resource.data.phone_key))
+             // (2) Server-side cooldown: is phone se pichli booking 10 min se
+             // kam purani ho to reject. Rate doc client khud purana time nahi
+             // likh sakta (booking_rate rule last_booking_at == request.time).
+             && ( !exists(/databases/$(database)/documents/booking_rate/$(request.resource.data.phone_key))
+               || request.time
+                  > get(/databases/$(database)/documents/booking_rate/$(request.resource.data.phone_key)).data.last_booking_at
+                    + duration.value(10, "m") )
+           ) );
     }
 
     // Tracking mirror: sirf safe status fields + phone ka SHA-256 hash.
@@ -90,7 +106,8 @@ service cloud.firestore {
           'booking_number', 'phone_hash', 'status', 'payout_status',
           'staff_name', 'staff_vehicle', 'expected_scrap_items', 'category_ids',
           'estimated_weight_kg', 'final_weight_kg', 'final_amount',
-          'items_collected', 'payout_method', 'updated_at'
+          'items_collected', 'payout_method', 'preferred_date',
+          'preferred_time_slot', 'updated_at'
         ])
         && d.keys().hasAll(['booking_number', 'phone_hash', 'status', 'updated_at'])
         // Sensitive fields kabhi nahi
@@ -112,6 +129,8 @@ service cloud.firestore {
         && (!d.keys().hasAny(['final_amount']) || d.final_amount == null || d.final_amount is number)
         && (!d.keys().hasAny(['items_collected']) || d.items_collected == null || d.items_collected is list)
         && (!d.keys().hasAny(['payout_method']) || (d.payout_method is string && d.payout_method.size() <= 20))
+        && (!d.keys().hasAny(['preferred_date']) || (d.preferred_date is string && d.preferred_date.size() <= 20))
+        && (!d.keys().hasAny(['preferred_time_slot']) || (d.preferred_time_slot is string && d.preferred_time_slot.size() <= 30))
         && d.updated_at is string && d.updated_at.size() <= 40;
     }
 
@@ -134,6 +153,42 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    // ---- Booking rate: per-phone cooldown ka timestamp ----
+    // Client padh nahi sakta (rules ke andar ka get/exempt hota hai).
+    // last_booking_at == request.time zaroori hai taaki koi purana time
+    // likh ke cooldown bypass na kare.
+    function isValidBookingRate() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['last_booking_at', 'booking_number'])
+        && d.keys().hasAll(['last_booking_at'])
+        && d.last_booking_at is timestamp
+        && d.last_booking_at == request.time
+        && (!d.keys().hasAny(['booking_number']) || (d.booking_number is string && d.booking_number.size() <= 20));
+    }
+    match /booking_rate/{phoneKey} {
+      allow read: if false;
+      allow create, update: if isValidBookingRate();
+      allow delete: if false;
+    }
+
+    // ---- Blocked phones: admin ka block list ----
+    // Doc id = phone ka SHA-256 key. Sirf last4 dikhta hai (staff/admin ko),
+    // poora number kahin store nahi hota.
+    function isValidBlockedPhone() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['blocked_at', 'last4', 'reason'])
+        && d.keys().hasAll(['blocked_at', 'last4'])
+        && d.blocked_at is string && d.blocked_at.size() <= 40
+        && d.last4 is string && d.last4.size() == 4
+        && (!d.keys().hasAny(['reason']) || (d.reason is string && d.reason.size() <= 120));
+    }
+    match /blocked_phones/{phoneKey} {
+      allow get, list: if isStaffOrAdmin();
+      allow create: if isStaffOrAdmin() && isValidBlockedPhone();
+      allow update: if false;
+      allow delete: if isStaffOrAdmin();
+    }
+
     // ---- Bookings: guest sirf create; read/update sirf staff/admin ----
     // Poori booking me address/UPI/OTP hota hai - public read kabhi nahi.
     match /bookings/{bookingId} {
@@ -143,10 +198,30 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // ---- Track links: token -> booking number (koi personal data nahi) ----
+    function isValidNewTrackLink(docId) {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['booking_number', 'created_at'])
+        && d.keys().hasAll(['booking_number', 'created_at'])
+        && docId.size() >= 20 && docId.size() <= 40
+        && d.booking_number is string && d.booking_number.size() >= 4 && d.booking_number.size() <= 20
+        && d.created_at is string && d.created_at.size() <= 40;
+    }
+
     // ---- Public tracking mirror: sirf SAFE status fields + phone hash ----
     // Guest Track Status yahi se chalti hai (getDoc by booking number).
     // GET khula hai par LIST band - koi saari bookings ek saath dump nahi kar sakta.
     // Plain customer phone kabhi nahi - sirf SHA-256 hash (P1-4).
+    match /track_links/{token} {
+      allow get: if true;
+      allow list: if false;
+      // Guest apni booking ka track-link token create kar sakta hai - doc me
+      // sirf booking number, koi personal data nahi. Token 20-40 char ka
+      // random string hai (guess impossible). Baad me change/delete nahi.
+      allow create: if isValidNewTrackLink(token);
+      allow update, delete: if false;
+    }
+
     match /tracking/{bookingNumber} {
       allow get: if true;
       allow list: if false;
@@ -214,5 +289,6 @@ service cloud.firestore {
     // users / payouts / audit_logs: default deny (abhi use nahi hote)
   }
 }
+
 
 
